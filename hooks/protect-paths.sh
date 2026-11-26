@@ -31,6 +31,10 @@ found=0
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   rel="${f#"$root"/}"
+  # SDLC artifact trees contain a stage named "build"; they are not build output.
+  case "$rel" in
+    execution/*|loop/*|wiki/*|knowledge/*|intake/*|sync/*) continue ;;
+  esac
   case "$rel" in
     build/*|*/.gradle/*|*/build/*|*/*/build/*|*/generated/*|src/gen/*)
       echo "BLOCKED: protected/generated path: $rel" >&2

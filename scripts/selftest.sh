@@ -21,6 +21,14 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
   && ok "control-plane repo enables core.hooksPath" || bad "control-plane core.hooksPath"
 [ -f "$WORK/demo-control-plane/scripts/install-hooks.sh" ] && [ -f "$WORK/demo-control-plane/.claude/settings.json" ] \
   && ok "control-plane repo ships install-hooks.sh and agent settings" || bad "control-plane agent wiring"
+mkdir -p "$WORK/demo-control-plane/execution/build/speaker"
+printf '{}\n' > "$WORK/demo-control-plane/execution/build/speaker/report.json"
+if ( cd "$WORK/demo-control-plane" && printf '{"tool_input":{"file_path":"%s"}}' \
+    "execution/build/speaker/report.json" | bash hooks/protect-paths.sh ) >/dev/null 2>&1; then
+  ok "protect-paths allows execution/<stage> artifacts"
+else
+  bad "protect-paths allows execution artifacts"
+fi
 [ "$("$ROOT/scripts/new-project.sh" --print-name demo)" = "demo-control-plane" ] && ok "naming: project control repo -> <project>-control-plane" || bad "naming control-plane"
 if "$ROOT/scripts/new-project.sh" demo "$WORK/wrong-control-name" >/dev/null 2>&1; then
   bad "control-plane naming gate rejects non-conforming target"
