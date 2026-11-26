@@ -15,4 +15,9 @@ cp "$PACK" "$SVC/.sdlc/cognition-pack.json"
 VER="$(jq -r '.metadata.version' "$PACK")"
 jq --arg v "$VER" '.cognitionPack.version = $v' "$SVC/service.json" > "$SVC/service.json.tmp"
 mv "$SVC/service.json.tmp" "$SVC/service.json"
+# Keep the collector metadata in step with the pinned pack version.
+if [ -f "$SVC/.sdlc/config.json" ]; then
+  jq --arg v "$VER" '.cognitionPack.version = $v' "$SVC/.sdlc/config.json" > "$SVC/.sdlc/config.json.tmp"
+  mv "$SVC/.sdlc/config.json.tmp" "$SVC/.sdlc/config.json"
+fi
 echo "synced cognition pack v$VER -> $SVC/.sdlc/cognition-pack.json (service.json pinned)"
