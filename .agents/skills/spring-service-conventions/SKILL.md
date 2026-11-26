@@ -61,3 +61,14 @@ where possible, by ArchUnit / `hooks/spring-guard.sh`.
 ## Done when
 
 The change follows the rules, layering, and version policy above.
+
+## Concurrency / async
+
+- Background work uses the injected `taskExecutor` (AsyncConfig). It wraps tasks with
+  `ContextPropagatingTaskDecorator` and registers `Slf4jThreadLocalAccessor`, so the current span,
+  `traceparent` on outbound calls, and MDC `traceId` survive the thread switch.
+- Never call `Executors.*`, construct `Thread`, or use one-arg `CompletableFuture.supplyAsync/runAsync`
+  (default pool). ArchUnit fails the build.
+- A custom executor must set the same TaskDecorator and MDC accessor; outbound clients still use the
+  auto-configured `RestClient.Builder`.
+- Messaging consumers propagate context through the starter's observation support, not manual headers.

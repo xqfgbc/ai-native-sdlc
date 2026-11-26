@@ -4,11 +4,17 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 
 import java.nio.file.Paths;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import com.tngtech.archunit.library.GeneralCodingRules;
 import jakarta.persistence.Entity;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.nameMatching;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -64,6 +70,29 @@ class ArchitectureTest {
     void apiMustNotDependOnAdapters() {
         noClasses().that().resideInAPackage("com.example.app.api..")
                 .should().dependOnClassesThat().resideInAPackage("com.example.app.adapters..")
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void noRawThreadPools() {
+        noClasses().should().callMethodWhere(target(owner(equivalentTo(Executors.class))))
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void noRawThreads() {
+        noClasses().should().callConstructorWhere(target(owner(equivalentTo(Thread.class))))
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void noUnmanagedCompletableFuture() {
+        noClasses().should().callMethodWhere(
+                        target(owner(equivalentTo(CompletableFuture.class)))
+                                .and(nameMatching("(supplyAsync|runAsync)")))
                 .allowEmptyShould(true)
                 .check(CLASSES);
     }

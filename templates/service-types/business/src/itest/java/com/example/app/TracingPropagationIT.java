@@ -3,9 +3,11 @@ package com.example.app;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
+import org.slf4j.MDC;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -28,6 +30,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -110,6 +114,23 @@ class TracingPropagationIT {
         assertThat(res.body()).contains(traceId);
     }
 
+    @Test
+    void asyncTaskKeepsTraceAndMdc() throws Exception {
+        String inbound = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+        HttpResponse<String> res = get("/itest/async-trace", Map.of("traceparent", inbound));
+
+        assertThat(res.statusCode()).isEqualTo(200);
+        String traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        assertThat(res.body()).contains("\"requestTraceId\":\"" + traceId + "\"");
+        assertThat(res.body()).contains("\"requestMdc\":\"" + traceId + "\"");
+        assertThat(res.body()).contains("\"asyncTraceId\":\"" + traceId + "\"");
+        assertThat(res.body()).contains("\"asyncMdc\":\"" + traceId + "\"");
+        String outbound = TRACEPARENTS.poll(5, TimeUnit.SECONDS);
+        assertThat(outbound).isNotNull();
+        assertThat(outbound.split("-")[1]).isEqualTo(traceId);
+    }
+
     private HttpResponse<String> get(String path, Map<String, String> headers) throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder(
                 URI.create("http://localhost:" + port + path)).GET();
@@ -131,17 +152,44 @@ class TracingPropagationIT {
 
         private final RestClient probeClient;
         private final Tracer tracer;
+        private final Executor executor;
 
-        TraceProbeController(RestClient probeClient, Tracer tracer) {
+        TraceProbeController(RestClient probeClient, Tracer tracer,
+                             @Qualifier("taskExecutor") Executor executor) {
             this.probeClient = probeClient;
             this.tracer = tracer;
+            this.executor = executor;
         }
 
         @GetMapping("/itest/trace")
         Map<String, String> trace() {
             probeClient.get().uri("/probe").retrieve().toBodilessEntity();
+            return Map.of("traceId", currentTraceId());
+        }
+
+        @GetMapping("/itest/async-trace")
+        Map<String, String> asyncTrace() throws Exception {
+            String requestTraceId = currentTraceId();
+            String requestMdc = String.valueOf(MDC.get("traceId"));
+            CompletableFuture<String[]> future = new CompletableFuture<>();
+            executor.execute(() -> {
+                try {
+                    String asyncTraceId = currentTraceId();
+                    String asyncMdc = String.valueOf(MDC.get("traceId"));
+                    probeClient.get().uri("/probe").retrieve().toBodilessEntity();
+                    future.complete(new String[]{asyncTraceId, asyncMdc});
+                } catch (RuntimeException exception) {
+                    future.completeExceptionally(exception);
+                }
+            });
+            String[] async = future.get(5, TimeUnit.SECONDS);
+            return Map.of("requestTraceId", requestTraceId, "requestMdc", requestMdc,
+                    "asyncTraceId", async[0], "asyncMdc", async[1]);
+        }
+
+        private String currentTraceId() {
             Span span = tracer.currentSpan();
-            return Map.of("traceId", span == null ? "none" : span.context().traceId());
+            return span == null ? "none" : span.context().traceId();
         }
     }
 }

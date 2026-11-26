@@ -49,7 +49,8 @@ bash scripts/app-verify.sh build|test|lint|itest|all|smoke
    生产 `ddl-auto: update`。细节见 skills 与 `AGENTS.md`。
 4. **链路追踪**：入站 W3C `traceparent` 自动提取，日志 correlation 带 `[service,traceId,spanId]`；
    出站必须使用自动配置的 `RestClient.Builder`（或 `WebClient.Builder`）构建客户端，traceparent 才会自动注入；
-   不要手写 HTTP 客户端。已验证：入站 traceparent 被尊重、出站自动注入（`TracingPropagationIT`），
+   不要手写 HTTP 客户端。跨线程用注入的 `taskExecutor`（AsyncConfig 已配置上下文与 MDC 传播），
+   禁止裸线程池/`new Thread`/默认池 `CompletableFuture`（ArchUnit 拦截）。已验证：入站 traceparent 被尊重、出站自动注入（`TracingPropagationIT`），
    日志 correlation 带 traceId/spanId。CloudWatch 走 OTLP→ADOT：AWS 环境设 `OTLP_TRACING_ENABLED=true` 与
    `MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT=<adot collector>`。
 5. **验证后再说完成**：`bash scripts/app-verify.sh all`（itest 需 Docker/Podman）或至少 build+test+lint，

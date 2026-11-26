@@ -81,6 +81,26 @@ ACTIVE_TITLES="[]"
 SERVICE_NAMES="[]"
 [ -f "$SERVICES_JSON" ] && SERVICE_NAMES="$(jq '[.services[].name]' "$SERVICES_JSON")"
 
+# Gate evidence is looked for in the control plane tooling and in each service's
+# main/gate files, not in arbitrary test code.
+SEARCH_PATHS=(hooks .githooks scripts)
+if [ -f "$SERVICES_JSON" ]; then
+  while IFS= read -r repo; do
+    [ -n "$repo" ] || continue
+    local_path="$repo"
+    if [ ! -d "$local_path" ] && [ "${repo#*/}" != "$repo" ]; then
+      local_path="$(dirname "$MGMT_ABS")/${repo##*/}"
+    fi
+    [ -d "$local_path" ] || continue
+    for sub in src/main hooks scripts; do
+      [ -e "$local_path/$sub" ] && SEARCH_PATHS=("${SEARCH_PATHS[@]}" "$local_path/$sub")
+    done
+    while IFS= read -r arch; do
+      [ -n "$arch" ] && SEARCH_PATHS=("${SEARCH_PATHS[@]}" "$arch")
+    done <<< "$(find "$local_path/src/test" -name ArchitectureTest.java 2>/dev/null || true)"
+  done <<< "$(jq -r '.services[].repo' "$SERVICES_JSON")"
+fi
+
 SUMMARY="$REVIEWS/SUMMARY.md"
 {
   echo "# Proposal review — $(date -u +%FT%TZ)"
@@ -100,7 +120,10 @@ write_review() { # file
 
   local norm; norm="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' ' ' | sed 's/^ *//; s/ *$//')"
   local duplicate="false"
-  if [ "$(printf '%s' "$ACTIVE_TITLES" | jq --arg t "$norm" '[.[]|select((.|ascii_downcase)=$t)]|length')" != "0" ]; then duplicate="true"; fi
+  if [ -f "$PACK_JSON" ] && jq -e --arg t "$norm" \
+      '[.items[]|select((.title|ascii_downcase)==$t)]|length>0' "$PACK_JSON" >/dev/null 2>&1; then
+    duplicate="true"
+  fi
 
   local risk="low"
   printf '%s %s' "$title" "$statement" | grep -qiE 'secret|credential|auth|token|pii|gdpr|payment|money|prod|production|schema|migration|contract|security' && risk="high"
@@ -118,7 +141,7 @@ write_review() { # file
   while IFS= read -r tok; do tokens+=("$tok"); done < <(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | grep -oE '[a-z][a-z0-9-]{4,}' | sort -u | head -4)
   for tok in "${tokens[@]:-}"; do
     [ -n "$tok" ] || continue
-    if grep -rqi -- "$tok" hooks .githooks scripts .agents/skills 2>/dev/null; then hits+=("$tok"); fi
+    if grep -rqi -- "$tok" "${SEARCH_PATHS[@]}" 2>/dev/null; then hits+=("$tok"); fi
   done
 
   local suggestion confidence reasons="[]"
@@ -129,6 +152,8 @@ write_review() { # file
     suggestion="promote-deterministic"; confidence="low"; add_reason "high-risk domain: needs a named security/ops owner and a deterministic gate"
   elif [ "$repeat_count" -ge 2 ] && [ "${#hits[@]}" -gt 0 ]; then
     suggestion="promote-deterministic"; confidence="high"; add_reason "repeated ${repeat_count}x and gate tooling already mentions: ${hits[*]}"
+  elif [ "${#hits[@]}" -ge 3 ]; then
+    suggestion="promote-deterministic"; confidence="medium"; add_reason "existing gate tooling already implements: ${hits[*]}"
   elif [ "${#hits[@]}" -ge 2 ] && printf '%s %s' "$title" "$statement" | grep -qiE '必须|禁止|不得|never|must|always'; then
     suggestion="promote-deterministic"; confidence="medium"; add_reason "normative wording and existing gate tooling mentions: ${hits[*]}"
   elif [ "$repeat_count" -ge 2 ]; then

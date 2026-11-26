@@ -74,6 +74,12 @@ for report_dir in $(find execution -type d -name reports 2>/dev/null | sort); do
       count="$(printf '%s' "$TITLE_COUNTS" | jq -r --arg t "$title" '.[$t] // 0')"
       [ -n "$count" ] || count=0
       repeat="false"; [ "${count:-0}" -ge 2 ] && repeat="true"
+      # A title already active in the pack is fulfilled; do not re-propose it.
+      if jq -e --arg t "$title" '[.items[]|select((.title|ascii_downcase)==($t|ascii_downcase))]|length>0' \
+          knowledge/pack.json >/dev/null 2>&1; then
+        rm -f "$prop"
+        continue
+      fi
       if [ ! -f "$prop" ]; then
         jq -n --arg id "P-${service}-${slug}" --arg svc "$service" --arg type "$type" \
           --arg title "$title" --arg stmt "$statement" --arg rep "$(basename "$rf")" \
