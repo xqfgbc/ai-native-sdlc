@@ -6,20 +6,116 @@
 #   review-proposals.sh stats                          # agreement rate from recorded human decisions
 #   review-proposals.sh record <proposal-id> --decision promote-deterministic|promote-advisory|debt|reject \
 #        --owner <name> [--note text]
+#   review-proposals.sh cluster [--json]               # group proposals that duplicate an active item
+#                                                      # (shared distinctive tokens) and mark the review
+#                                                      # suggestion reject-duplicate. Never activates.
 #
 # The suggestion is advisory: a human still signs via signoff.py / promote-proposal.sh.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MGMT="${1:-.}"
-[ "$MGMT" = "stats" ] || [ "$MGMT" = "record" ] || true
-if [ "${1:-}" = "stats" ] || [ "${1:-}" = "record" ]; then MGMT="."; else MGMT="${1:-.}"; fi
+[ "$MGMT" = "stats" ] || [ "$MGMT" = "record" ] || [ "$MGMT" = "cluster" ] || true
+if [ "${1:-}" = "stats" ] || [ "${1:-}" = "record" ] || [ "${1:-}" = "cluster" ]; then
+  MGMT="."
+else
+  MGMT="${1:-.}"
+fi
 cd "$MGMT"
 MGMT_ABS="$(pwd)"
 REVIEWS="knowledge/reviews"
 PROPOSALS="knowledge/proposals"
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# Semantic duplicate signal: shared distinctive ASCII tokens. CJK titles have no
+# reliable tokenizer here, so those stay "unique" and a human decides.
+TOK_STOP='the|and|for|with|use|must|only|from|into|not|are|was|has|have|all|any|its'
+tokens_of() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' \
+    | grep -oE '[a-z][a-z0-9]{2,}' | grep -vxE "$TOK_STOP" | sort -u || true
+}
+shared_of() {
+  comm -12 <(printf '%s' "$1" | grep -v '^$' | sort -u) \
+           <(printf '%s' "$2" | grep -v '^$' | sort -u) || true
+}
 
 case "${1:-}" in
+  cluster)
+    JSON_OUT=0; [ "${2:-}" = "--json" ] && JSON_OUT=1
+    PACK_JSON="knowledge/pack.json"
+    [ -f "$PACK_JSON" ] || { echo "review: missing $PACK_JSON" >&2; exit 1; }
+    CLUSTERS="[]"; UNIQUE="[]"
+    shopt -s nullglob
+    for prop in knowledge/proposals/*.json; do
+      [ -f "$prop" ] || continue
+      pid="$(jq -r '.id' "$prop")"
+      ptitle="$(jq -r '.title // ""' "$prop")"
+      ptoks="$(tokens_of "$ptitle")"
+      if [ -z "$ptoks" ]; then
+        UNIQUE="$(printf '%s' "$UNIQUE" | jq --arg id "$pid" '. + [$id]')"
+        echo "cluster: $pid -> unique (no distinctive tokens)"
+        continue
+      fi
+
+      best_id=""; best_title=""; best_shared=""
+      while IFS=$'\t' read -r aid atitle; do
+        [ -n "$aid" ] || continue
+        shared="$(shared_of "$ptoks" "$(tokens_of "$atitle")")"
+        n="$(printf '%s\n' "$shared" | grep -c . 2>/dev/null || true)"
+        if [ "$n" -ge 2 ]; then
+          best_id="$aid"; best_title="$atitle"; best_shared="$shared"
+          break
+        fi
+      done <<< "$(jq -r '.items[]?|select(.status=="active")|"\(.id)\t\(.title)"' "$PACK_JSON" 2>/dev/null || true)"
+
+      if [ -n "$best_id" ]; then
+        tokens_json="$(printf '%s\n' "$best_shared" | jq -R -s 'split("\n")|map(select(length>0))')"
+        CLUSTERS="$(printf '%s' "$CLUSTERS" | jq \
+          --arg pid "$pid" --arg cid "$best_id" --arg ctitle "$best_title" --argjson toks "$tokens_json" \
+          '. + [{kind:"active-duplicate", canonical:{source:"pack",id:$cid,title:$ctitle},
+                 members:[{id:$pid,sharedTokens:$toks}]}]')"
+        # Advisory only: flag the review, never resolve or activate anything.
+        mkdir -p knowledge/reviews
+        RF="knowledge/reviews/$pid.json"
+        if [ ! -f "$RF" ]; then
+          jq -n --arg id "$pid" --arg at "$NOW" --arg cid "$best_id" --argjson toks "$tokens_json" \
+            '{apiVersion:"sdlc/v1",kind:"ProposalReview",proposalId:$id,generatedAt:$at,
+              ai:{suggestion:"reject-duplicate",confidence:"high",risk:"low",
+                  reasons:["an active item already covers this: "+$cid],gateHits:[],
+                  service:"",repeatCount:1,duplicateOf:$cid,sharedTokens:$toks},human:null}' > "$RF"
+        else
+          tmp="$(mktemp)"
+          jq --arg cid "$best_id" --argjson toks "$tokens_json" \
+            'if .human != null then . else
+               .ai.suggestion="reject-duplicate" | .ai.confidence="high"
+               | .ai.duplicateOf=$cid | .ai.sharedTokens=$toks
+               | .ai.reasons=((.ai.reasons // []) + ["an active item already covers this: "+$cid])
+             end' "$RF" > "$tmp" && mv "$tmp" "$RF"
+        fi
+        echo "cluster: $pid -> duplicate of active $best_id ($(printf '%s' "$best_shared" | paste -sd, -))"
+      else
+        UNIQUE="$(printf '%s' "$UNIQUE" | jq --arg id "$pid" '. + [$id]')"
+        echo "cluster: $pid -> unique"
+      fi
+    done
+
+    REPORT="$(jq -n --arg at "$NOW" --argjson clusters "$CLUSTERS" --argjson unique "$UNIQUE" \
+      '{apiVersion:"sdlc/v1",kind:"ProposalClusters",generatedAt:$at,clusters:$clusters,unique:$unique}')"
+    mkdir -p knowledge/reviews
+    printf '%s\n' "$REPORT" > knowledge/reviews/clusters.json
+    {
+      echo "# Proposal clusters — $NOW"; echo
+      echo "## Duplicate of an active item"; echo
+      echo "| Proposal | Active item | Shared tokens |"; echo "|---|---|---|"
+      printf '%s' "$REPORT" | jq -r '.clusters[] | .canonical as $c | .members[] | "| \(.id) | \($c.id) | \(.sharedTokens|join(", ")) |"'
+      echo; echo "## Unique"; echo
+      printf '%s' "$REPORT" | jq -r '.unique[] | "- \(.)"'
+    } > knowledge/reviews/clusters.md
+    if [ "$JSON_OUT" = 1 ]; then
+      printf '%s\n' "$REPORT"
+    else
+      echo "cluster: $(printf '%s' "$REPORT" | jq '.clusters|length') duplicate(s), $(printf '%s' "$REPORT" | jq '.unique|length') unique -> knowledge/reviews/clusters.{json,md}"
+    fi
+    exit 0
+    ;;
   stats)
     shopt -s nullglob
     files=( "$REVIEWS"/*.json )
@@ -119,10 +215,22 @@ write_review() { # file
   prov="$(jq -r '[.provenance[]?]|join(",")' "$prop")"
 
   local norm; norm="$(printf '%s' "$title" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' ' ' | sed 's/^ *//; s/ *$//')"
-  local duplicate="false"
-  if [ -f "$PACK_JSON" ] && jq -e --arg t "$norm" \
-      '[.items[]|select((.title|ascii_downcase)==$t)]|length>0' "$PACK_JSON" >/dev/null 2>&1; then
-    duplicate="true"
+  local duplicate="false" dup_of=""
+  if [ -f "$PACK_JSON" ]; then
+    if jq -e --arg t "$norm" \
+        '[.items[]|select((.title|ascii_downcase)==$t)]|length>0' "$PACK_JSON" >/dev/null 2>&1; then
+      duplicate="true"
+    else
+      local pid_tokens; pid_tokens="$(tokens_of "$title")"
+      if [ -n "$pid_tokens" ]; then
+        while IFS=$'\t' read -r aid atitle; do
+          [ -n "$aid" ] || continue
+          local shared_n
+          shared_n="$(shared_of "$pid_tokens" "$(tokens_of "$atitle")" | grep -c . 2>/dev/null || true)"
+          if [ "$shared_n" -ge 2 ]; then duplicate="true"; dup_of="$aid"; break; fi
+        done <<< "$(jq -r '.items[]?|select(.status=="active")|"\(.id)\t\(.title)"' "$PACK_JSON" 2>/dev/null || true)"
+      fi
+    fi
   fi
 
   local risk="low"
@@ -147,7 +255,8 @@ write_review() { # file
   local suggestion confidence reasons="[]"
   add_reason() { reasons="$(printf '%s' "$reasons" | jq --arg r "$1" '. + [$r]')"; }
   if [ "$duplicate" = "true" ]; then
-    suggestion="reject-duplicate"; confidence="high"; add_reason "an active pack item already carries this title"
+    suggestion="reject-duplicate"; confidence="high"
+    add_reason "an active item already covers this${dup_of:+: $dup_of}"
   elif [ "$risk" = "high" ]; then
     suggestion="promote-deterministic"; confidence="low"; add_reason "high-risk domain: needs a named security/ops owner and a deterministic gate"
   elif [ "$repeat_count" -ge 2 ] && [ "${#hits[@]}" -gt 0 ]; then

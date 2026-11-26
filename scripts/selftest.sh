@@ -239,6 +239,17 @@ if [ -n "$prop" ]; then
     ok "validate detects registry/local cognition drift"
   fi
   cp "$WORK/reg.bak" "$REG_JSON"
+  # Semantic clustering: a reworded copy of an active rule is flagged for rejection.
+  dup_id="P-order-service-semantic-dup"
+  active_title="$(jq -r --arg id "$prop" '.items[]|select(.id==$id)|.title' "$WORK/demo-control-plane/knowledge/pack.json")"
+  jq -n --arg id "$dup_id" --arg t "$active_title always" \
+    '{apiVersion:"sdlc/v1",kind:"KnowledgeProposal",id:$id,
+      title:$t,statement:$t,status:"proposed",provenance:[]}' \
+    > "$WORK/demo-control-plane/knowledge/proposals/$dup_id.json"
+  ( cd "$WORK/demo-control-plane" && bash scripts/review-proposals.sh cluster >/dev/null )
+  jq -e --arg id "$dup_id" '.clusters[]|select(any(.members[]; .id==$id))' \
+    "$WORK/demo-control-plane/knowledge/reviews/clusters.json" >/dev/null 2>&1 \
+    && ok "cluster flags a reworded duplicate of an active item" || bad "proposal clustering"
 else
   bad "no proposal to promote"
 fi

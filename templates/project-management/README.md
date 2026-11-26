@@ -59,6 +59,7 @@ AI 预判与人工决定一致率：
 
 ```bash
 bash scripts/review-proposals.sh .          # 生成 knowledge/reviews/<id>.json
+bash scripts/review-proposals.sh cluster    # 与 active 条目语义聚类，重复项建议 reject-duplicate
 bash scripts/review-proposals.sh stats
 ```
 
