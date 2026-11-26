@@ -1,6 +1,8 @@
 #!/bin/sh
-# .githooks/pre-push — block direct pushes to protected branches. The
-# authoritative gate is GitHub branch protection; this fails early.
+# .githooks/pre-push — two deterministic gates before anything leaves the repo:
+#   1. protected branches (main/master/prod/uat) take a PR, not a direct push;
+#   2. the repo's own verification must pass (verify-before-push, like sun-life's
+#      final check). Skip only deliberately: SDL_SKIP_VERIFY=1 and say why.
 set -e
 branch="$(git rev-parse --abbrev-ref HEAD)"
 case "$branch" in
@@ -9,4 +11,32 @@ case "$branch" in
     exit 1
     ;;
 esac
+
+root="$(git rev-parse --show-toplevel)"
+
+if [ "${SDL_SKIP_VERIFY:-0}" = "1" ]; then
+  echo "pre-push: verification skipped (SDL_SKIP_VERIFY=1)" >&2
+  exit 0
+fi
+
+if [ -f "$root/scripts/app-verify.sh" ] && { [ -f "$root/build.gradle.kts" ] || [ -f "$root/package.json" ]; }; then
+  echo "pre-push: app-verify build+test+lint ..." >&2
+  ( cd "$root" && bash scripts/app-verify.sh build && bash scripts/app-verify.sh test && bash scripts/app-verify.sh lint ) || {
+    echo "pre-push: verification failed. Fix it; only skip deliberately with SDL_SKIP_VERIFY=1." >&2
+    exit 1
+  }
+elif [ -f "$root/scripts/validate-project.sh" ] && [ -f "$root/loop/04-build/services.json" ]; then
+  echo "pre-push: validate-project ..." >&2
+  ( cd "$root" && bash scripts/validate-project.sh . ) || {
+    echo "pre-push: project validation failed." >&2
+    exit 1
+  }
+elif [ -f "$root/scripts/selftest.sh" ] && [ -d "$root/templates" ]; then
+  echo "pre-push: framework selftest ..." >&2
+  ( cd "$root" && bash scripts/selftest.sh ) || {
+    echo "pre-push: framework selftest failed." >&2
+    exit 1
+  }
+fi
+
 exit 0

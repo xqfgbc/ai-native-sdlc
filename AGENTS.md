@@ -185,6 +185,9 @@ Codex、opencode、DeepSeek Harness 原生读取；`.claude/skills/<name>/` 是�
 - `feat(<slug>): <work item>` / `fix(<slug>): <work item>` — 实现 commit；正文写 plan 工作项并粘贴验证输出。
 - `docs(agents): <correction>` — 来自重复评审发现的指令/技能纠正。
 - PR：标题 `[<slug>] <title>`；描述链接 intent 目录、陈述风险、包含 verify-work 输出块。
+- 强制层：`pre-commit`（secret/路径/Boot4）、`commit-msg`（上面的消息格式）、`pre-push`（受保护分支 +
+  推送前验证）。`--no-verify` 只有人类明确批准时才可用。
+- **Agent 不自行 push**：推送前必须由人确认（含服务仓）；推送以远端为准交接。
 
 ---
 

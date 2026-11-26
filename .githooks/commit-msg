@@ -1,0 +1,15 @@
+#!/bin/sh
+# .githooks/commit-msg — enforce the commit message convention (AGENTS.md §6).
+# Every commit must name its stage/type so it can be tied to the intent/spec/plan
+# artifact it belongs to; otherwise the audit trail degrades to free text.
+set -e
+msg_file="$1"
+first="$(grep -v '^#' "$msg_file" | grep -v '^[[:space:]]*$' | head -1)"
+case "$first" in
+  "Merge "*|"Revert "*) exit 0 ;;
+esac
+printf '%s' "$first" | grep -Eq '^(intent|spec|plan|feat|fix|docs|chore|refactor|test|perf|ci|build|revert)(\([^)]+\))?: .+' || {
+  echo "commit-msg: follow AGENTS.md §6, e.g. 'feat(<slug>): <work item>' or 'fix: <what>'" >&2
+  echo "commit-msg: got: ${first:-<empty>}" >&2
+  exit 1
+}

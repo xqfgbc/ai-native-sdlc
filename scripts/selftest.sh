@@ -79,6 +79,17 @@ git -C "$WORK/demo-order-service-management" config --unset core.hooksPath 2>/de
 jq -e '.hooks.SessionStart[0].hooks[0].command | test("install-hooks")' \
   "$WORK/demo-order-service-management/.claude/settings.json" >/dev/null 2>&1 \
   && ok "agent settings install the hooks on session start" || bad "session-start wiring"
+[ -x "$WORK/demo-order-service-management/.githooks/commit-msg" ] \
+  && ok "service repo ships the commit-msg gate" || bad "commit-msg shipped"
+printf 'nope\n' > "$WORK/msg-bad.txt"
+if ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WORK/msg-bad.txt" ) >/dev/null 2>&1; then
+  bad "commit-msg rejects an untyped message"
+else
+  ok "commit-msg rejects an untyped message"
+fi
+printf 'feat(speaker): add endpoint\n' > "$WORK/msg-good.txt"
+( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WORK/msg-good.txt" >/dev/null 2>&1 ) \
+  && ok "commit-msg accepts a typed message" || bad "commit-msg accepts a typed message"
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \

@@ -23,5 +23,13 @@ SessionStart hook 自动执行，其他 agent 见 `AGENTS.md` 会话协议第 0 
 
 这些是"建议性技能"背后的确定性层（见 `AGENTS.md` §1）：技能让违规变少，hook 让违规不可能。
 
+`.githooks/` 三个门禁：
+
+- `pre-commit` → `no-secrets` + `protect-paths` + `spring-guard`（全量 staged 检查）。
+- `commit-msg` → 强制 `AGENTS.md` §6 的提交信息格式（`type(scope): subject`），保证提交可追溯到阶段/产物。
+- `pre-push` → 拦截 `main/master/prod/uat` 直推，并在推送前跑本仓验证：
+  服务仓 `app-verify build+test+lint`、控制平面仓 `validate-project`、框架仓 `selftest`；
+  只有 `SDL_SKIP_VERIFY=1` 才能显式跳过（并在 PR 里说明理由）。
+
 stdin 读取都有上界：普通文件整读，其他非 TTY 输入只读一行且最多等 1 秒——所以 stdin 是
 未关闭的管道时，hook 会退回 git 模式而不是挂起。
