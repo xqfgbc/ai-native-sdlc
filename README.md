@@ -24,7 +24,7 @@
 ## 2. 快速开始
 
 ```bash
-# 0) 框架自检：应 46 项全绿
+# 0) 框架自检：应 49 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -82,7 +82,8 @@ bash scripts/analyze-reports.sh .
 | `frontend-vue` | Vue 3 + Vite + TypeScript + Vitest | ✅ 结构/JSON 校验（npm 需联网） |
 
 每个服务仓生成时自带：`app-verify.sh`（统一验证 CLI）、`feature-map.md`（功能→验证状态）、
-`collect.yml`（push 采集）、`.sdlc/`、`.agents/skills`、`findings/`（scanner 队列）、`Makefile`。
+`collect.yml`（push 采集）、`.sdlc/`、`.agents/skills`、`findings/`（scanner 队列）、`Makefile`，
+以及 `hooks/` + `.githooks/`（已设置 `core.hooksPath=.githooks`，之后每次 commit/push 都过确定性门禁）。
 
 ### 4.1 仓库命名规则（生成器强制）
 
@@ -154,7 +155,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（46 项）。
+- 框架自检：`bash scripts/selftest.sh`（49 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -213,4 +214,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 46 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 49 passed, 0 failed`。

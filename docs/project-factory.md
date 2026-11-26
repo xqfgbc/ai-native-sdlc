@@ -59,6 +59,8 @@ scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allo
 - 写入 `service.json`、`.sdlc/config.json`（含 `managementRepo`、`lastCollectedSha`）。
 - 复制采集器 `.sdlc/collect.sh`。
 - 落地多 agent 规范源：`.agents/skills/` + `.claude/skills/` + `.claude/agents/` + `scripts/validate-skills.sh`。
+- 复制确定性护栏 `hooks/` + `.githooks/`，并设置 `core.hooksPath=.githooks`（bootstrap 提交之后启用；
+  重新 clone 后需再执行一次 `git config core.hooksPath .githooks`）。
 - 在管理仓 `loop/04-build/services.json` **登记**。
 
 ## 3. 内环：commit → 报告 → 分析 → wiki

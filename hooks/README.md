@@ -8,6 +8,9 @@
    用 `git config core.hooksPath .githooks` 安装。CI 是权威镜像
    （见 `.github/workflows/framework-selftest.yml`）。
 
+生成的服务仓会自动带上 `hooks/` + `.githooks/` 并设好 `core.hooksPath`（bootstrap 提交之后启用）；
+`core.hooksPath` 是本地配置，重新 clone 后要再执行一次 `git config core.hooksPath .githooks`。
+
 | 脚本 | 作用 | 模式 |
 |---|---|---|
 | `no-secrets.sh` | 拦截 diff/编辑中的 secrets | git + PreToolUse |

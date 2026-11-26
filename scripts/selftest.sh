@@ -50,6 +50,18 @@ fi
 [ -f "$WORK/demo-order-service-management/scripts/autopilot-gate.sh" ] && ok "trust ladder autopilot gate" || bad "autopilot-gate"
 [ -f "$WORK/demo-order-service-management/scripts/scan-findings.sh" ] && ok "scanner findings tooling" || bad "scan-findings"
 [ -f "$WORK/demo-order-service-management/findings/inbox.md" ] && ok "findings inbox seeded" || bad "findings inbox"
+[ -f "$WORK/demo-order-service-management/.githooks/pre-commit" ] && [ -f "$WORK/demo-order-service-management/hooks/no-secrets.sh" ] \
+  && ok "service repo ships the git hooks" || bad "git hooks shipped"
+[ "$(git -C "$WORK/demo-order-service-management" config core.hooksPath 2>/dev/null)" = ".githooks" ] \
+  && ok "service repo enables core.hooksPath" || bad "core.hooksPath"
+if ns_out="$( cd "$WORK/demo-order-service-management" \
+    && printf 'AKIA%s\n' 'ABCDEFGHIJKLMNOP' > leak.txt \
+    && git add leak.txt && git commit -q -m "leak" 2>&1 )"; then
+  bad "installed pre-commit blocks a secret"
+else
+  printf '%s' "$ns_out" | grep -q 'no-secrets' && ok "installed pre-commit blocks a secret" || bad "installed pre-commit blocks a secret"
+fi
+( cd "$WORK/demo-order-service-management" && git reset -q && rm -f leak.txt )
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \

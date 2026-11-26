@@ -162,6 +162,13 @@ cp "$ROOT/scripts/app-verify.sh" "$TARGET/scripts/" 2>/dev/null || true
 # Trust ladder + scanner queue tooling.
 cp "$ROOT/scripts/autopilot-gate.sh" "$ROOT/scripts/scan-findings.sh" "$TARGET/scripts/" 2>/dev/null || true
 chmod +x "$TARGET/scripts/autopilot-gate.sh" "$TARGET/scripts/scan-findings.sh" 2>/dev/null || true
+
+# Deterministic guardrails: ship the universal hooks with the repo and enable
+# them for every future commit/push (core.hooksPath is local config — a fresh
+# clone must re-run `git config core.hooksPath .githooks`).
+cp -R "$ROOT/hooks" "$TARGET/"
+cp -R "$ROOT/.githooks" "$TARGET/"
+chmod +x "$TARGET"/hooks/*.sh "$TARGET"/.githooks/*
 mkdir -p "$TARGET/findings"
 cat > "$TARGET/findings/README.md" <<EOF
 # findings/ — scanner inbox (append-only)
@@ -186,6 +193,9 @@ cat > "$TARGET/feature-map.md" <<EOF
 EOF
 
 ( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${SERVICE_NAME} (${TYPE}) from template" ) || true
+# Enable the hooks only after the bootstrap commit: factory-generated content is
+# trusted, while every human/agent commit from here on is gated.
+( cd "$TARGET" && git config core.hooksPath .githooks ) || true
 
 # Register in services.json.
 REG="$MGMT_ABS/loop/04-build/services.json"
