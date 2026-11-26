@@ -19,6 +19,8 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
   && ok "control-plane repo ships the git hooks" || bad "control-plane hooks shipped"
 [ "$(git -C "$WORK/demo-control-plane" config core.hooksPath 2>/dev/null)" = ".githooks" ] \
   && ok "control-plane repo enables core.hooksPath" || bad "control-plane core.hooksPath"
+[ -f "$WORK/demo-control-plane/scripts/install-hooks.sh" ] && [ -f "$WORK/demo-control-plane/.claude/settings.json" ] \
+  && ok "control-plane repo ships install-hooks.sh and agent settings" || bad "control-plane agent wiring"
 [ "$("$ROOT/scripts/new-project.sh" --print-name demo)" = "demo-control-plane" ] && ok "naming: project control repo -> <project>-control-plane" || bad "naming control-plane"
 if "$ROOT/scripts/new-project.sh" demo "$WORK/wrong-control-name" >/dev/null 2>&1; then
   bad "control-plane naming gate rejects non-conforming target"
@@ -66,6 +68,17 @@ else
   printf '%s' "$ns_out" | grep -q 'no-secrets' && ok "installed pre-commit blocks a secret" || bad "installed pre-commit blocks a secret"
 fi
 ( cd "$WORK/demo-order-service-management" && git reset -q && rm -f leak.txt )
+[ -f "$WORK/demo-order-service-management/scripts/install-hooks.sh" ] && [ -f "$WORK/demo-order-service-management/.claude/settings.json" ] \
+  && ok "service repo ships install-hooks.sh and agent settings" || bad "service repo agent wiring"
+git -C "$WORK/demo-order-service-management" config --unset core.hooksPath 2>/dev/null || true
+( cd "$WORK/demo-order-service-management" && bash scripts/install-hooks.sh >/dev/null ) \
+  && [ "$(git -C "$WORK/demo-order-service-management" config core.hooksPath 2>/dev/null)" = ".githooks" ] \
+  && ok "install-hooks.sh enables the hooks" || bad "install-hooks.sh"
+( cd "$WORK/demo-order-service-management" && bash scripts/install-hooks.sh >/dev/null ) \
+  && ok "install-hooks.sh is idempotent" || bad "install-hooks.sh idempotent"
+jq -e '.hooks.SessionStart[0].hooks[0].command | test("install-hooks")' \
+  "$WORK/demo-order-service-management/.claude/settings.json" >/dev/null 2>&1 \
+  && ok "agent settings install the hooks on session start" || bad "session-start wiring"
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \

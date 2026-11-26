@@ -9,8 +9,9 @@
    （见 `.github/workflows/framework-selftest.yml`）。
 
 生成的服务仓和控制平面仓都会自动带上 `hooks/` + `.githooks/` 并设好 `core.hooksPath`
-（bootstrap 提交之后启用）；`core.hooksPath` 是本地配置，重新 clone 后要再执行一次
-`git config core.hooksPath .githooks`。
+（bootstrap 提交之后启用）；`core.hooksPath` 是本地配置，**重新 clone 后第一时间运行**
+`bash scripts/install-hooks.sh`（幂等）即可恢复——Claude Code 通过 `.claude/settings.json` 的
+SessionStart hook 自动执行，其他 agent 见 `AGENTS.md` 会话协议第 0 步。
 
 | 脚本 | 作用 | 模式 |
 |---|---|---|

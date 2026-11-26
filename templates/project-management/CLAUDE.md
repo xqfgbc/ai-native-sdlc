@@ -6,6 +6,7 @@
 项目控制平面 + 实时 wiki：`loop/`（外环 SDLC）、`execution/`（内环事实）、`knowledge/`（沉淀环）、`wiki/`（生成视图）。
 
 ## 常用命令（路径按实际调整）
+- 启用护栏（clone 后首次）：`bash scripts/install-hooks.sh`（幂等）
 - 分析报告：`bash <framework>/scripts/analyze-reports.sh .`
 - 校验：`bash <framework>/scripts/validate-project.sh .`
 

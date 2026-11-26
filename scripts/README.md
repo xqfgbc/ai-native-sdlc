@@ -32,6 +32,7 @@
 
 | 命令 | 用途 |
 |---|---|
+| `install-hooks.sh` | 启用本仓 `.githooks`（`core.hooksPath`）；幂等，clone 后/会话开始先跑 |
 | `app-verify.sh [build\|test\|lint\|itest\|all\|smoke]` | **统一验证 CLI**（Java/Node 自动识别） |
 | `autopilot-gate.sh` | L3 autopilot 确定性门禁（信任阶梯） |
 | `scan-findings.sh` | 确定性 foot-gun 扫描 → findings/inbox.md |

@@ -23,6 +23,7 @@
 
 ## 3. 会话协议
 
+0. 确保护栏已启用：`bash scripts/install-hooks.sh`（幂等；Claude Code 在 SessionStart 自动执行）。
 1. 先读本文件 + `loop/README.md` + 当前阶段产物。
 2. 明确当前阶段与外环任务，**不要越过人类门禁**。
 3. 产出物写入对应 `loop/` 阶段目录，`draft` 状态由人改为 `accepted`。

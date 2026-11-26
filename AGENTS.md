@@ -47,6 +47,7 @@ DeepSeek Harness，或任何遵守 `AGENTS.md` 的 agent。它定义你要跑的
 
 每个会话开始前，先做：
 
+0. 确保护栏已启用：`bash scripts/install-hooks.sh`（幂等；Claude Code 在 SessionStart 自动执行）。
 1. 读本文件与 `CLAUDE.md`。
 2. 识别当前**阶段**（§4）与会话触发（想法、已接受产物、流水线事件、告警）。
 3. 加载该阶段的**技能**（§5）并严格执行。

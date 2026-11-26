@@ -61,8 +61,14 @@ cp "$ROOT"/schemas/*.json "$TARGET/sync/schemas/" 2>/dev/null || true
 mkdir -p "$TARGET/scripts"
 cp "$ROOT/scripts/analyze-reports.sh" "$ROOT/scripts/validate-project.sh" \
    "$ROOT/scripts/promote-proposal.sh" "$ROOT/scripts/sync-cognition.sh" \
-   "$ROOT/scripts/intake.sh" "$ROOT/scripts/intake-signal.sh" "$TARGET/scripts/"
+   "$ROOT/scripts/intake.sh" "$ROOT/scripts/intake-signal.sh" \
+   "$ROOT/scripts/install-hooks.sh" "$TARGET/scripts/"
 chmod +x "$TARGET"/scripts/*.sh
+
+# Agent wiring so a fresh clone installs the hooks on the first session.
+mkdir -p "$TARGET/.claude" "$TARGET/.codex"
+cp "$ROOT/.claude/settings.json" "$TARGET/.claude/" 2>/dev/null || true
+cp "$ROOT/.codex/hooks.json" "$TARGET/.codex/" 2>/dev/null || true
 
 # Deterministic guardrails: ship the universal hooks with the control repo.
 cp -R "$ROOT/hooks" "$TARGET/"

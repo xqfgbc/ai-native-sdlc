@@ -8,6 +8,8 @@
 - 门禁：intent/spec 由产品/架构确认；plan 由工程接受；合并由 code owner 批准。
 
 ## 2. 会话协议（强制）
+
+> 会话开始先运行 `bash scripts/install-hooks.sh`（幂等，启用 `.githooks`；Claude Code 会自动执行）。
 每次 AI 会话结束前，写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`：
 - 本次要做什么（人的指令摘要）
 - AI 实际做了什么（关键改动）

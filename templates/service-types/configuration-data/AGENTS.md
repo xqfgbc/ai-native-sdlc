@@ -6,6 +6,8 @@
 `intent → spec → plan → build → test → deploy → maintain`；无接受的 plan 不写配置。
 
 ## 会话协议
+
+> 会话开始先运行 `bash scripts/install-hooks.sh`（幂等，启用 `.githooks`；Claude Code 会自动执行）。
 每次会话结束写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`：人的指令、AI 实际改动、纠正、规则缺口、未决问题。
 
 ## 采集与上传

@@ -151,8 +151,14 @@ mkdir -p "$TARGET/.agents" "$TARGET/.claude" "$TARGET/scripts"
 cp -R "$ROOT/.agents/skills" "$TARGET/.agents/" 2>/dev/null || true
 cp -R "$ROOT/.claude/skills" "$TARGET/.claude/" 2>/dev/null || true
 cp -R "$ROOT/.claude/agents" "$TARGET/.claude/" 2>/dev/null || true
+# Agent wiring so a fresh clone installs the hooks on the first session.
+cp "$ROOT/.claude/settings.json" "$TARGET/.claude/" 2>/dev/null || true
+mkdir -p "$TARGET/.codex"
+cp "$ROOT/.codex/hooks.json" "$TARGET/.codex/" 2>/dev/null || true
 cp "$ROOT/scripts/validate-skills.sh" "$TARGET/scripts/" 2>/dev/null || true
+cp "$ROOT/scripts/install-hooks.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/validate-skills.sh" ] && chmod +x "$TARGET/scripts/validate-skills.sh"
+[ -f "$TARGET/scripts/install-hooks.sh" ] && chmod +x "$TARGET/scripts/install-hooks.sh"
 # P2: remote push channel for reports.
 cp "$ROOT/scripts/upload-report.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/upload-report.sh" ] && chmod +x "$TARGET/scripts/upload-report.sh"
