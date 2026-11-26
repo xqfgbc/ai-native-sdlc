@@ -29,3 +29,24 @@ management:
     health:
       probes:
         enabled: true
+
+  tracing:
+    propagation:
+      type: W3C
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}
+    export:
+      otlp:
+        enabled: ${OTLP_TRACING_ENABLED:false}
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      enabled: false
+
+logging:
+  include-application-name: false
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

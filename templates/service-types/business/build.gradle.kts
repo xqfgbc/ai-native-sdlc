@@ -25,6 +25,10 @@ val itestDir = file("src/itest/java")
 if (itestDir.exists()) {
     val itest = the<SourceSetContainer>().create("itest")
     itest.java.srcDir(itestDir)
+    // A custom source set does not inherit the main output; without this Spring Boot
+    // cannot find @SpringBootConfiguration at runtime.
+    itest.compileClasspath += sourceSets.main.get().output
+    itest.runtimeClasspath += sourceSets.main.get().output
     configurations.named(itest.implementationConfigurationName) {
         extendsFrom(configurations.getByName("testImplementation"))
     }
@@ -52,14 +56,20 @@ dependencies {
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.restclient)
+    implementation(libs.spring.boot.starter.opentelemetry)
     implementation(libs.spring.cloud.starter.kubernetes.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.spring.cloud.starter.circuitbreaker.resilience4j)
 
+    implementation(libs.spring.boot.starter.flyway)
+    runtimeOnly(libs.flyway.database.postgresql)
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.h2)
 
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.webmvc.test)
+    testImplementation(libs.spring.boot.data.jpa.test)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit.jupiter)

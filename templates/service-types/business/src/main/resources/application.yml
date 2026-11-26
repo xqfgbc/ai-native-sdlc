@@ -7,13 +7,18 @@ spring:
   config:
     import: "optional:configserver:http://config-server:8888"
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/app}
-    username: ${DB_USERNAME:app}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/{{SERVICE}}}
+    username: ${DB_USERNAME:{{SERVICE}}}
+    password: ${DB_PASSWORD:{{SERVICE}}}
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  flyway:
+    enabled: true
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
   mvc:
     problemdetails:
       enabled: true
@@ -31,3 +36,23 @@ management:
     health:
       probes:
         enabled: true
+  tracing:
+    propagation:
+      type: W3C
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}
+    export:
+      otlp:
+        enabled: ${OTLP_TRACING_ENABLED:false}
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  logging:
+    export:
+      enabled: false
+
+logging:
+  include-application-name: false
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

@@ -16,9 +16,8 @@ java = "21"
 spring-boot = "4.1.3"
 spring-cloud = "2025.1.5"
 checkstyle = "10.12.5"
-# Testcontainers is not managed by the Spring Boot BOM. Pin it here and verify
-# at https://java.testcontainers.org when the platform team upgrades.
-testcontainers = "1.20.6"
+# Testcontainers versions come from the Spring Boot BOM (2.0.5 on Boot 4.1.3);
+# the 2.x modules use the testcontainers-* coordinates.
 # gRPC Netty transport: Spring Cloud Gateway 5.x's JSON-to-gRPC auto-config
 # needs it on the classpath. Matches the grpc version managed by the Cloud BOM.
 grpc = "1.84.1"
@@ -40,9 +39,18 @@ spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-s
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-restclient = { module = "org.springframework.boot:spring-boot-starter-restclient" }
+# Distributed tracing: OTel bridge (micrometer-tracing 1.7.3) + OTLP exporter, both BOM-managed.
+spring-boot-starter-opentelemetry = { module = "org.springframework.boot:spring-boot-starter-opentelemetry" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+# Boot 4 split the test slices into modules (not pulled by starter-test).
+spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
+spring-boot-data-jpa-test = { module = "org.springframework.boot:spring-boot-data-jpa-test" }
 # Testcontainers integration: @ServiceConnection auto-configures the datasource.
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+# Schema migrations (Flyway 12.4.0, managed by the Spring Boot BOM).
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 
 # Spring Cloud (Oakwood, 5.x line). Coordinates renamed from the 3.x/4.x era:
 #   spring-cloud-starter-gateway              -> spring-cloud-starter-gateway-server-webflux
@@ -59,10 +67,9 @@ spring-cloud-starter-circuitbreaker-resilience4j = { module = "org.springframewo
 postgresql = { module = "org.postgresql:postgresql" }
 h2 = { module = "com.h2database:h2" }
 
-# Testcontainers (explicitly versioned; import the BOM, then use unversioned modules).
-testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
-testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
+# Testcontainers 2.x (versions flow from the Spring Boot BOM).
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 
 # gRPC Netty transport (gateway JSON-to-gRPC auto-config).
 grpc-netty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }

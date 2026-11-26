@@ -1,16 +1,23 @@
-# Local profile: H2, no Config Server, no Kubernetes discovery.
+# Local profile: PostgreSQL in Podman (see scripts/dev-db.sh), no Config Server,
+# no Kubernetes discovery. Run `bash scripts/dev-db.sh up` before starting.
 spring:
   config:
     import: ""
   datasource:
-    url: jdbc:h2:mem:app;DB_CLOSE_DELAY=-1
-    username: sa
-    password: ""
-    driver-class-name: org.h2.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/{{SERVICE}}}
+    username: ${DB_USERNAME:{{SERVICE}}}
+    password: ${DB_PASSWORD:{{SERVICE}}}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
+  flyway:
+    enabled: true
   cloud:
     kubernetes:
       discovery:
         enabled: false
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0

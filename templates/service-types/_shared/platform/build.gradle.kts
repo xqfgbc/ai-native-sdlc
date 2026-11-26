@@ -20,7 +20,6 @@ dependencies {
     // `dependencies`, NOT inside `constraints`, for the versions to flow.)
     api(platform(libs.spring.boot.bom))
     api(platform(libs.spring.cloud.bom))
-    api(platform(libs.testcontainers.bom))
 
     constraints {
         // Starters used across services — versions flow from the BOMs above.
@@ -29,7 +28,11 @@ dependencies {
         api(libs.spring.boot.starter.validation)
         api(libs.spring.boot.starter.actuator)
         api(libs.spring.boot.starter.data.jpa)
+        api(libs.spring.boot.starter.restclient)
+        api(libs.spring.boot.starter.opentelemetry)
         api(libs.spring.boot.starter.test)
+        api(libs.spring.boot.webmvc.test)
+        api(libs.spring.boot.data.jpa.test)
         api(libs.spring.boot.testcontainers)
 
         // Spring Cloud: gateway, k8s-native discovery, config, resilience.
@@ -44,6 +47,8 @@ dependencies {
         // Databases and test tooling.
         api(libs.postgresql)
         api(libs.h2)
+        api(libs.spring.boot.starter.flyway)
+        api(libs.flyway.database.postgresql)
         api(libs.testcontainers.postgresql)
         api(libs.testcontainers.junit.jupiter)
 

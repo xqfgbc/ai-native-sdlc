@@ -21,6 +21,20 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "prod"
+            # Tracing: W3C traceparent on the wire; OTLP to the ADOT collector -> CloudWatch/X-Ray.
+            # The collector address is environment-specific (observability namespace shown).
+            - name: OTEL_SERVICE_NAME
+              value: "gateway"
+            - name: OTLP_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OPENTELEMETRY_TRACING_EXPORT_OTLP_ENDPOINT
+              value: "http://adot-collector.observability.svc.cluster.local:4318/v1/traces"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext"
+            - name: MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED
+              value: "false"
+            - name: MANAGEMENT_LOGGING_EXPORT_ENABLED
+              value: "false"
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

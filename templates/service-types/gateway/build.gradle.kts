@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.spring.cloud.starter.kubernetes.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.opentelemetry)
 
     // Spring Cloud Gateway 5.x's JSON-to-gRPC auto-config needs the Netty transport.
     implementation(libs.grpc.netty)

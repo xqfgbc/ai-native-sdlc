@@ -2,16 +2,23 @@ package com.example.app;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+
+import java.nio.file.Paths;
 import com.tngtech.archunit.library.GeneralCodingRules;
+import jakarta.persistence.Entity;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /** Deterministic architecture guardrails (see the architecture-guardrails skill). */
 class ArchitectureTest {
 
-    private static final JavaClasses CLASSES = new ClassFileImporter().importPackages("com.example.app");
+    // Import production classes only: test classes legitimately use field injection.
+    private static final JavaClasses CLASSES = new ClassFileImporter()
+            .importPath(Paths.get("build/classes/java/main"));
 
     @Test
     void controllersLiveInApi() {
@@ -41,6 +48,30 @@ class ArchitectureTest {
     @Test
     void noLegacyDate() {
         noClasses().should().dependOnClassesThat().haveFullyQualifiedName("java.util.Date")
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void entitiesLiveInThePersistenceAdapter() {
+        classes().that().areAnnotatedWith(Entity.class)
+                .should().resideInAPackage("com.example.app.adapters.persistence..")
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void apiMustNotDependOnAdapters() {
+        noClasses().that().resideInAPackage("com.example.app.api..")
+                .should().dependOnClassesThat().resideInAPackage("com.example.app.adapters..")
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void transactionalMethodsArePublic() {
+        methods().that().areAnnotatedWith(Transactional.class)
+                .should().bePublic()
                 .allowEmptyShould(true)
                 .check(CLASSES);
     }

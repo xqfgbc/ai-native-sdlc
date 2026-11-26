@@ -49,6 +49,7 @@ dependencies {
 
     implementation(libs.spring.cloud.config.server)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.opentelemetry)
 
     testImplementation(libs.spring.boot.starter.test)
 }
