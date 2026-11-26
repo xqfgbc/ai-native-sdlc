@@ -1,0 +1,7 @@
+# 共享默认值：读取本仓的所有服务都会继承。
+# 覆盖顺序：application.yml < application-<profile>.yml <<service>.yml < <service>-<env>.yml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

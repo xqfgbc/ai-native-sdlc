@@ -10,7 +10,8 @@ docker build -t config-server .
 ```
 
 ## 职责
-- 集中管理各服务配置（infra 仓 `config/` 本地 / git 生产）。
+- 集中管理各服务配置（本地 `config/` 走 native；生产/非生产走配置数据仓
+  `<project>-prod-configuration-data` / `<project>-devops-configuration-data` 的 git 后端）。
 - 配置变更要回灌管理仓 `knowledge/context`。
 
 ## 内环

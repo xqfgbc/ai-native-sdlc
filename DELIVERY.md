@@ -18,7 +18,7 @@ DELIVERY.md                            本文件（交付清单 + 使用手册�
 README.md                              框架概览
 templates/                             ★ 生成模板
   project-management/                  管理仓模板（loop/execution/knowledge/wiki/sync）
-  service-types/                       5 类服务模板 + _shared（Gradle 脚手架）
+  service-types/                       6 类服务模板 + _shared（Gradle 脚手架）
 schemas/                               execution-report / service-registry / cognition-pack（JSON Schema）
 scripts/                               ★ 生成器 + 闭环脚本
   new-project.sh                       生成项目管理仓
@@ -44,7 +44,7 @@ research/                              上游研究（playbook、Spring 坑、Gi
 
 | 阶段 | 交付能力 | 关键文件 | 验证 |
 |---|---|---|---|
-| **P1** | 多仓工厂：管理仓模板 + 5 类服务模板 + 生成器 | `templates/`、`scripts/new-*.sh` | selftest |
+| **P1** | 多仓工厂：管理仓模板 + 6 类服务模板 + 生成器 | `templates/`、`scripts/new-*.sh` | selftest |
 | P1 | 管理仓自包含（analyzer/validator 随生成复制） | `new-project.sh` | selftest |
 | P1 | 多 agent 规范源（D8） | `new-service-repo.sh` 复制 `.agents/skills` + `.claude` | selftest |
 | **P2** | 服务仓 collect 工作流（push/dispatch） | `templates/**/.github/workflows/collect.yml` | selftest |
@@ -72,8 +72,8 @@ research/                              上游研究（playbook、Spring 坑、Gi
 
 ```bash
 $ bash scripts/selftest.sh
-... 31 项 PASS ...
-selftest: 31 passed, 0 failed
+... 41 项 PASS ...
+selftest: 41 passed, 0 failed
 
 $ ./scripts/validate-skills.sh
 validate-skills: OK (19 skills, 8 agents)
@@ -102,16 +102,17 @@ validate-skills: OK (19 skills, 8 agents)
 # 1) 生成一个项目管理仓
 scripts/new-project.sh myproj ./myproj-management
 
-# 2) 生成服务仓（每类一个 repo；自动登记到管理仓 services.json）
-scripts/new-service-repo.sh business order-service ./myproj-management
-scripts/new-service-repo.sh gateway api-gateway ./myproj-management
-scripts/new-service-repo.sh config-server config-server ./myproj-management
-scripts/new-service-repo.sh frontend-vue web-portal ./myproj-management
-scripts/new-service-repo.sh infra infra ./myproj-management
+# 2) 生成服务仓（目录名按命名规则推导；自动登记到管理仓 services.json）
+scripts/new-service-repo.sh business speaker ./myproj-management        # → myproj-speaker-management
+scripts/new-service-repo.sh gateway api ./myproj-management             # → myproj-api-gateway
+scripts/new-service-repo.sh config-server config-server ./myproj-management   # → myproj-config-server
+scripts/new-service-repo.sh configuration-data devops ./myproj-management     # → myproj-devops-configuration-data
+scripts/new-service-repo.sh configuration-data prod ./myproj-management       # → myproj-prod-configuration-data
+scripts/new-service-repo.sh infra aws ./myproj-management               # → myproj-aws-infra
 
 # 3) 在服务仓里开发并提交 → 自动采集 → 管理仓分析
-cd order-service
-git add -A && git commit -m "feat: order status [learn] prefer RestClient over RestTemplate"
+cd myproj-speaker-management
+git add -A && git commit -m "feat: speaker status [learn] prefer RestClient over RestTemplate"
 bash .sdlc/collect.sh
 cd ../myproj-management && bash scripts/analyze-reports.sh .
 ```
@@ -171,7 +172,7 @@ bash scripts/validate-project.sh .
    → 进入 `knowledge/pack.json` 的 `active` 条目，pack 版本 bump。
 4. 下发到服务仓（本地模拟/远端 PR）：
    ```bash
-   bash scripts/sync-cognition.sh . ../order-service
+   bash scripts/sync-cognition.sh . ../myproj-speaker-management
    ```
    → `.sdlc/cognition-pack.json` + `service.json` 锁定版本。
 
@@ -259,18 +260,18 @@ bash scripts/validate-project.sh .
 ## 13. 现在怎么用（端到端一次跑通）
 
 ```bash
-# 0) 框架自检（应 31 项全绿）
+# 0) 框架自检（应 41 项全绿）
 bash scripts/selftest.sh
 
 # 1) 生成项目 + 服务
 scripts/new-project.sh myproj ./myproj-management
-scripts/new-service-repo.sh business order-service ./myproj-management
+scripts/new-service-repo.sh business speaker ./myproj-management   # → myproj-speaker-management
 
 # 2) 服务仓：改功能 → 先自验 → 更新 feature-map → 提交 → 采集
-cd order-service
+cd myproj-speaker-management
 bash scripts/app-verify.sh all          # build+test+lint+itest（Java）；前端走 npm
 # 在 feature-map.md 记录：功能 → 需求 → 验证命令 → 状态
-git add -A && git commit -m "feat: order status [learn] prefer RestClient"
+git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                   # 增量报告 + hash 链
 
 # 3) 管理仓：分析 → 看 wiki / 测试 / DORA
@@ -279,18 +280,18 @@ bash scripts/analyze-reports.sh .
 ls wiki/ loop/05-test/                  # index/dora/testing + results
 
 # 4) 认知闭环：人工签核 → 下发
-bash scripts/promote-proposal.sh . P-order-service-<slug> <owner> deterministic
-bash scripts/sync-cognition.sh . ../order-service
+bash scripts/promote-proposal.sh . P-speaker-<slug> <owner> deterministic
+bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 # 5) 情报入口：任意渠道 → 信号 → 候选
 echo "客户反馈：注册太慢" | scripts/intake-signal.sh onboarding "客户反馈：注册太慢"
 bash scripts/intake.sh
 
 # 6) 信任阶梯：升级到 L3 后由门禁判断能否自动合并
-( cd ../order-service && bash scripts/autopilot-gate.sh )
+( cd ../myproj-speaker-management && bash scripts/autopilot-gate.sh )
 
 # 7) 扫描（只扫不改）
-( cd ../order-service && bash scripts/scan-findings.sh && cat findings/inbox.md )
+( cd ../myproj-speaker-management && bash scripts/scan-findings.sh && cat findings/inbox.md )
 ```
 
 ### 关键约定速记

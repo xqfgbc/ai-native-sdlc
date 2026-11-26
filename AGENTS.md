@@ -12,7 +12,7 @@ DeepSeek Harness，或任何遵守 `AGENTS.md` 的 agent。它定义你要跑的
 
 本仓库是 AI-Native SDLC 的**工厂/模板仓**，不是业务项目：
 - `templates/project-management/` — 生成"项目管理仓"模板（控制平面 + 实时 wiki）。
-- `templates/service-types/{infra,gateway,config-server,business,frontend-vue}/` — 5 类服务仓模板。
+- `templates/service-types/{infra,gateway,config-server,configuration-data,business,frontend-vue}/` — 6 类服务仓模板。
 - `scripts/new-project.sh` / `new-service-repo.sh` — 本地生成项目 / 服务仓（不建远端仓）。
 - `scripts/collect.sh` / `analyze-reports.sh` / `validate-project.sh` — 采集 / 分析 / 校验闭环。
 - `.agents/skills/` + `.claude/`/`.codex/`/`.opencode/` — 公共规范源与 agent 适配。

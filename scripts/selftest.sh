@@ -14,18 +14,36 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
 "$ROOT/scripts/new-project.sh" demo "$WORK/demo-management" >/dev/null
 [ -f "$WORK/demo-management/loop/04-build/services.json" ] && ok "new-project creates management repo" || bad "new-project"
 [ -f "$WORK/demo-management/scripts/analyze-reports.sh" ] && ok "management repo is self-contained" || bad "self-contained"
+( cd "$WORK/demo-management" && bash scripts/validate-project.sh . >/dev/null ) && ok "fresh management repo validates (empty registry, no reports)" || bad "validate empty project"
 
-"$ROOT/scripts/new-service-repo.sh" business order-service "$WORK/demo-management" "$WORK/order-service" >/dev/null
-"$ROOT/scripts/new-service-repo.sh" frontend-vue web-portal "$WORK/demo-management" "$WORK/web-portal" >/dev/null
-[ -f "$WORK/order-service/.sdlc/config.json" ] && ok "new-service-repo creates service repo" || bad "new-service-repo"
-[ -d "$WORK/order-service/.agents/skills" ] && ok "D8: .agents/skills present" || bad "D8 skills"
-[ -f "$WORK/order-service/.github/workflows/collect.yml" ] && ok "service repo collect workflow (C1)" || bad "collect workflow"
-[ -f "$WORK/order-service/scripts/upload-report.sh" ] && ok "service repo upload script (C2)" || bad "upload script"
-[ -f "$WORK/order-service/scripts/app-verify.sh" ] && ok "service repo unified verify CLI" || bad "app-verify"
-[ -f "$WORK/order-service/feature-map.md" ] && ok "feature map seeded" || bad "feature-map"
-[ -f "$WORK/order-service/scripts/autopilot-gate.sh" ] && ok "trust ladder autopilot gate" || bad "autopilot-gate"
-[ -f "$WORK/order-service/scripts/scan-findings.sh" ] && ok "scanner findings tooling" || bad "scan-findings"
-[ -f "$WORK/order-service/findings/inbox.md" ] && ok "findings inbox seeded" || bad "findings inbox"
+# 1b. repo naming rules (--print-name derives the repo dir without side effects)
+name_of() { "$ROOT/scripts/new-service-repo.sh" --print-name "$1" "$2" "$WORK/demo-management" 2>/dev/null; }
+[ "$(name_of business speaker)" = "demo-speaker-management" ] && ok "naming: business -> <project>-<service>-management" || bad "naming business"
+[ "$(name_of gateway api)" = "demo-api-gateway" ] && ok "naming: gateway -> <project>-<usage>-gateway" || bad "naming gateway"
+[ "$(name_of infra aws)" = "demo-aws-infra" ] && ok "naming: infra -> <project>-<cloud>-infra" || bad "naming infra"
+[ "$(name_of config-server config-server)" = "demo-config-server" ] && ok "naming: config-server -> <project>-config-server" || bad "naming config-server"
+[ "$(name_of configuration-data prod)" = "demo-prod-configuration-data" ] && ok "naming: configuration-data prod" || bad "naming prod config"
+[ "$(name_of configuration-data devops)" = "demo-devops-configuration-data" ] && ok "naming: configuration-data devops" || bad "naming devops config"
+if "$ROOT/scripts/new-service-repo.sh" business speaker "$WORK/demo-management" "$WORK/wrong-repo-name" >/dev/null 2>&1; then
+  bad "naming gate rejects non-conforming target"
+else
+  ok "naming gate rejects non-conforming target"
+fi
+
+"$ROOT/scripts/new-service-repo.sh" business order-service "$WORK/demo-management" "$WORK/demo-order-service-management" >/dev/null
+"$ROOT/scripts/new-service-repo.sh" frontend-vue web-portal "$WORK/demo-management" "$WORK/demo-web-portal-management" >/dev/null
+"$ROOT/scripts/new-service-repo.sh" configuration-data devops "$WORK/demo-management" "$WORK/demo-devops-configuration-data" >/dev/null
+[ -f "$WORK/demo-devops-configuration-data/service.json" ] && ok "configuration-data template generates a repo" || bad "configuration-data template"
+[ "$(jq -r .type "$WORK/demo-devops-configuration-data/service.json")" = "configuration-data" ] && ok "configuration-data service.json type" || bad "configuration-data type"
+[ -f "$WORK/demo-order-service-management/.sdlc/config.json" ] && ok "new-service-repo creates service repo" || bad "new-service-repo"
+[ -d "$WORK/demo-order-service-management/.agents/skills" ] && ok "D8: .agents/skills present" || bad "D8 skills"
+[ -f "$WORK/demo-order-service-management/.github/workflows/collect.yml" ] && ok "service repo collect workflow (C1)" || bad "collect workflow"
+[ -f "$WORK/demo-order-service-management/scripts/upload-report.sh" ] && ok "service repo upload script (C2)" || bad "upload script"
+[ -f "$WORK/demo-order-service-management/scripts/app-verify.sh" ] && ok "service repo unified verify CLI" || bad "app-verify"
+[ -f "$WORK/demo-order-service-management/feature-map.md" ] && ok "feature map seeded" || bad "feature-map"
+[ -f "$WORK/demo-order-service-management/scripts/autopilot-gate.sh" ] && ok "trust ladder autopilot gate" || bad "autopilot-gate"
+[ -f "$WORK/demo-order-service-management/scripts/scan-findings.sh" ] && ok "scanner findings tooling" || bad "scan-findings"
+[ -f "$WORK/demo-order-service-management/findings/inbox.md" ] && ok "findings inbox seeded" || bad "findings inbox"
 [ -f "$WORK/demo-management/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-management" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-management/intake/candidates/"*.md 2>/dev/null || true)" ] && \
@@ -33,18 +51,18 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
 ( cd "$WORK/demo-management" && bash scripts/intake-signal.sh onboarding "Slack: signup slow" "body" >/dev/null )
 sig="$(ls "$WORK/demo-management/intake/signals/"*.md 2>/dev/null | grep -v 'README.md' | grep -v 'example-signal' | head -1 || true)"
 [ -n "$sig" ] && ok "intake-signal writes a channel signal" || bad "intake-signal"
-[ -f "$WORK/web-portal/package.json" ] && ok "frontend-vue template has build content" || bad "frontend-vue build"
+[ -f "$WORK/demo-web-portal-management/package.json" ] && ok "frontend-vue template has build content" || bad "frontend-vue build"
 
 # 2. registry
-[ "$(jq '.services|length' "$WORK/demo-management/loop/04-build/services.json")" = "2" ] && ok "registry has 2 services" || bad "registry"
+[ "$(jq '.services|length' "$WORK/demo-management/loop/04-build/services.json")" = "3" ] && ok "registry has 3 services" || bad "registry"
 
 # 3. commit + collect twice (hash chain + candidates + session-log)
-( cd "$WORK/order-service" && mkdir -p sdlc/session-log \
+( cd "$WORK/demo-order-service-management" && mkdir -p sdlc/session-log \
   && printf '%s\n' '# session 20260101-0000' '' '## 人的指令' '- build the order status endpoint' '' '## 规则缺口' '- prefer RestClient over RestTemplate' > sdlc/session-log/20260101-0000.md \
   && echo "# demo" >> README.md && git add -A \
   && git commit -q -m "feat: order status [learn] prefer @ServiceConnection" \
   && bash .sdlc/collect.sh >/dev/null )
-( cd "$WORK/order-service" && echo "more" >> README.md && git add -A \
+( cd "$WORK/demo-order-service-management" && echo "more" >> README.md && git add -A \
   && git commit -q -m "fix: null status [learn] prefer @ServiceConnection" && bash .sdlc/collect.sh >/dev/null )
 REPORTS=( "$WORK/demo-management/execution/build/order-service/reports/"*.json )
 [ "${#REPORTS[@]}" -eq 2 ] && ok "two reports uploaded (idempotent)" || bad "reports count"
@@ -86,8 +104,8 @@ if [ -n "$prop" ]; then
   ver="$(jq -r '.metadata.version' "$WORK/demo-management/knowledge/pack.json")"
   [ "$ver" != "0.1.0" ] && ok "promote-proposal bumps pack version ($ver)" || bad "pack version bump"
   [ -f "$WORK/demo-management/knowledge/guardrails/$prop.md" ] && ok "deterministic guardrail stub" || bad "guardrail stub"
-  ( cd "$WORK/demo-management" && bash scripts/sync-cognition.sh . "$WORK/order-service" >/dev/null )
-  [ -f "$WORK/order-service/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
+  ( cd "$WORK/demo-management" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
+  [ -f "$WORK/demo-order-service-management/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
 else
   bad "no proposal to promote"
 fi

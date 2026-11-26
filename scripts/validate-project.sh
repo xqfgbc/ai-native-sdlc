@@ -12,7 +12,7 @@ REG="loop/04-build/services.json"
 if [ ! -f "$REG" ]; then fail_msg "missing $REG"; else
   jq -e '.apiVersion == "sdlc/v1" and .kind == "ServiceRegistry" and (.services|type=="array")' "$REG" >/dev/null \
     || fail_msg "services.json invalid (apiVersion/kind/services)"
-  jq -e '.services[] | has("name") and has("type") and has("repo") and has("phase") and has("requirements")' "$REG" >/dev/null 2>&1 \
+  jq -e '.services | all(has("name") and has("type") and has("repo") and has("phase") and has("requirements"))' "$REG" >/dev/null 2>&1 \
     || fail_msg "services.json: entry missing required fields"
 fi
 
@@ -30,8 +30,10 @@ for f in $REPORTS; do
     || fail_msg "report invalid: $f"
 done
 
-# 4. wiki generated
-[ -f wiki/index.md ] || fail_msg "missing wiki/index.md (run analyze-reports.sh)"
+# 4. wiki generated (the wiki is derived from reports; with none, there is nothing to derive)
+if [ -n "$REPORTS" ] && [ ! -f wiki/index.md ]; then
+  fail_msg "missing wiki/index.md (run analyze-reports.sh)"
+fi
 
 if [ "$fail" -eq 0 ]; then
   echo "validate-project: OK ($(jq '.services|length' "$REG" 2>/dev/null || echo 0) services, $(echo "$REPORTS" | grep -c . || true) reports)"

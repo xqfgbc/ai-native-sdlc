@@ -23,19 +23,36 @@ scripts/              自包含的 analyzer/validator（analyze-reports.sh / val
 ## 2. 生成服务仓
 
 ```bash
-scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir]
-# 例：scripts/new-service-repo.sh business order-service ./orders-management
+scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
+# 例：scripts/new-service-repo.sh business speaker ./ses-management   # → ./ses-speaker-management
 ```
 
-5 类 `type`：
+6 类 `type`：
 
 | type | 技术栈 | 说明 |
 |---|---|---|
 | `infra` | Terraform + Helm + Flux | 基础设施仓（GitOps） |
 | `gateway` | Spring Boot 4.1.3 + Cloud Gateway | 独立可构建（含 platform/wrapper/checkstyle） |
 | `config-server` | Spring Cloud Config | 独立可构建 |
+| `configuration-data` | Spring Cloud Config 数据仓（yml） | 按环境分仓：`prod` / `devops` |
 | `business` | Spring Boot 4.1.3 + JPA + Testcontainers + ArchUnit | 独立可构建（基础包 `com.example.app`） |
 | `frontend-vue` | Vue 3 + Vite + TS | 前端仓 |
+
+### 命名规则（生成器强制）
+
+`<project>` = 管理仓名去掉 `-management`。目录名默认按规则推导；显式 `target-dir` 不符合规则会报错
+（`--allow-custom-name` 可绕过）。`--print-name` 只打印推导结果，无副作用。
+
+| 用途 | 规则 | `<project>=ses` 示例 | `name` 参数 |
+|---|---|---|---|
+| 服务仓（business / frontend-vue） | `<project>-<service>-management` | `ses-speaker-management` | `speaker` |
+| gateway | `<project>-<usage>-gateway` | `ses-api-gateway` | `api` |
+| infra | `<project>-<cloud>-infra` | `ses-aws-infra` | `aws` |
+| config-server | `<project>-config-server` | `ses-config-server` | `config-server` |
+| configuration-data | `<project>-<prod\|devops>-configuration-data` | `ses-prod-configuration-data` / `ses-devops-configuration-data` | `prod` / `devops` |
+
+`services.json` 与 `service.json` 的 `name` 用短服务名（`speaker`、`api`、`aws`、`prod-configuration-data`…），
+仓库全名写在 `repo` 字段。
 
 生成的服务仓会自动：
 - 写入 `service.json`、`.sdlc/config.json`（含 `managementRepo`、`lastCollectedSha`）。

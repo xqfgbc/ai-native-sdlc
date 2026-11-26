@@ -14,7 +14,7 @@
       "properties": {
         "service": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
         "repo": { "type": "string" },
-        "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue"] },
+        "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue", "configuration-data"] },
         "agent": { "type": "string" },
         "trigger": { "enum": ["commit", "schedule", "manual"] },
         "fromSha": { "type": "string" },

@@ -1,21 +1,116 @@
 #!/usr/bin/env bash
 # scripts/new-service-repo.sh — generate a service repo from a service-type template,
 # wire its collector, and register it in the management repo's services.json.
-# Usage: scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir]
+#
+# Repo naming rules (derived from <project>, the management repo name minus "-management"):
+#   business, frontend-vue   <project>-<service>-management        e.g. ses-speaker-management
+#   gateway                  <project>-<usage>-gateway             e.g. ses-api-gateway
+#   infra                    <project>-<cloud>-infra               e.g. ses-aws-infra
+#   config-server            <project>-config-server               e.g. ses-config-server
+#   configuration-data       <project>-<prod|devops>-configuration-data
+#                                                                  e.g. ses-prod-configuration-data
+#
+# Usage: scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
+#        scripts/new-service-repo.sh --print-name <type> <name> <management-repo>
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TYPE="${1:-}"; NAME="${2:-}"; MGMT="${3:-}"; TARGET="${4:-}"
-[ -n "$TYPE" ] && [ -n "$NAME" ] && [ -n "$MGMT" ] || {
-  echo "Usage: $0 <infra|gateway|config-server|business|frontend-vue> <name> <management-repo> [target-dir]" >&2; exit 1; }
-[ -d "$ROOT/templates/service-types/$TYPE" ] || { echo "ERROR: no template for type '$TYPE'" >&2; exit 1; }
+
+ALLOW_CUSTOM=0
+PRINT_NAME=0
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --allow-custom-name) ALLOW_CUSTOM=1 ;;
+    --print-name) PRINT_NAME=1 ;;
+    *) ARGS+=("$a") ;;
+  esac
+done
+TYPE="${ARGS[0]:-}"; NAME="${ARGS[1]:-}"; MGMT="${ARGS[2]:-}"; TARGET="${ARGS[3]:-}"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
+       new-service-repo.sh --print-name <type> <name> <management-repo>
+
+Types and repo naming rules (<project> = management repo name minus "-management"):
+  business, frontend-vue  <project>-<service>-management     (<name> = service)
+  gateway                 <project>-<usage>-gateway          (<name> = usage)
+  infra                   <project>-<cloud>-infra            (<name> = cloud provider)
+  config-server           <project>-config-server            (<name> = config-server)
+  configuration-data      <project>-<prod|devops>-configuration-data
+EOF
+}
+
+kebab() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'; }
+
+# normalize <value> by stripping the project prefix and the type suffix.
+normalize() { # <value> <project> <suffix>
+  local v; v="$(kebab "$1")"
+  local p; p="$(kebab "$2")"
+  [ -n "$p" ] && v="${v#"$p"-}"
+  [ -n "$3" ] && v="${v%-"$3"}"
+  printf '%s' "$v"
+}
+
+repo_name() { # <type> <name> <project>
+  case "$1" in
+    business|frontend-vue) printf '%s-%s-management' "$3" "$(normalize "$2" "$3" management)" ;;
+    gateway)               printf '%s-%s-gateway'    "$3" "$(normalize "$2" "$3" gateway)" ;;
+    infra)                 printf '%s-%s-infra'      "$3" "$(normalize "$2" "$3" infra)" ;;
+    config-server)         printf '%s-config-server' "$3" ;;
+    configuration-data)    printf '%s-%s-configuration-data' "$3" "$(normalize "$2" "$3" configuration-data)" ;;
+  esac
+}
+
+service_name() { # <type> <name> <project> — the logical service name used in reports/registry
+  case "$1" in
+    business|frontend-vue) normalize "$2" "$3" management ;;
+    gateway)               normalize "$2" "$3" gateway ;;
+    infra)                 normalize "$2" "$3" infra ;;
+    config-server)         printf 'config-server' ;;
+    configuration-data)    printf '%s-configuration-data' "$(normalize "$2" "$3" configuration-data)" ;;
+  esac
+}
+
+[ -n "$TYPE" ] && [ -n "$NAME" ] && [ -n "$MGMT" ] || { usage; exit 1; }
+[ -d "$ROOT/templates/service-types/$TYPE" ] || { echo "ERROR: no template for type '$TYPE'" >&2; usage; exit 1; }
 [ -d "$MGMT" ] || { echo "ERROR: management repo not found: $MGMT" >&2; exit 1; }
-TARGET="${TARGET:-./$NAME}"
-[ -e "$TARGET" ] && { echo "ERROR: target exists: $TARGET" >&2; exit 1; }
 
 MGMT_ABS="$(cd "$MGMT" && pwd)"
 PROJECT="$(basename "$MGMT_ABS")"; PROJECT="${PROJECT%-management}"
 
+SERVICE_NAME="$(service_name "$TYPE" "$NAME" "$PROJECT")"
+REPO_NAME="$(repo_name "$TYPE" "$NAME" "$PROJECT")"
+
+case "$TYPE" in
+  config-server)
+    [ "$SERVICE_NAME" = "config-server" ] || {
+      echo "ERROR: config-server repos are named <project>-config-server; pass name 'config-server' (got '$NAME')" >&2; exit 1; } ;;
+  configuration-data)
+    case "$SERVICE_NAME" in
+      prod-configuration-data|devops-configuration-data) ;;
+      *) echo "ERROR: configuration-data env must be 'prod' or 'devops' (got '$NAME')" >&2; exit 1; ;;
+    esac ;;
+esac
+printf '%s' "$SERVICE_NAME" | grep -qE '^[a-z][a-z0-9-]*$' || { echo "ERROR: invalid service name: '$SERVICE_NAME'" >&2; exit 1; }
+printf '%s' "$REPO_NAME" | grep -qE '^[a-z][a-z0-9-]*$' || { echo "ERROR: invalid repo name: '$REPO_NAME'" >&2; exit 1; }
+
+if [ "$PRINT_NAME" = 1 ]; then
+  printf '%s\n' "$REPO_NAME"
+  exit 0
+fi
+
+TARGET="${TARGET:-./$REPO_NAME}"
+TARGET_BASE="$(basename "$TARGET")"
+if [ "$TARGET_BASE" != "$REPO_NAME" ] && [ "$ALLOW_CUSTOM" = 0 ]; then
+  echo "ERROR: target dir '$TARGET_BASE' does not follow the naming rule for type '$TYPE' (expected '$REPO_NAME')." >&2
+  echo "       Pass --allow-custom-name to override." >&2
+  exit 1
+fi
+[ -e "$TARGET" ] && { echo "ERROR: target exists: $TARGET" >&2; exit 1; }
+
 mkdir -p "$TARGET"
+TARGET_ABS="$(cd "$TARGET" && pwd)"
 # Standalone Java service repos vendor shared Gradle scaffolding (platform BOM, wrapper, checkstyle).
 case " gateway config-server business " in
   *" $TYPE "*)
@@ -31,7 +126,7 @@ find "$TARGET" -type f \
      -o -name '*.java' -o -name '*.tpl' -o -name '*.html' -o -name '*.ts' -o -name '*.js' -o -name '*.css' -o -name '*.vue' \
      -o -name 'Dockerfile' \) \
   -print0 | while IFS= read -r -d '' f; do
-    perl -pi -e "s/\{\{SERVICE\}\}/${NAME}/g; s/\{\{PROJECT\}\}/${PROJECT}/g; s/\{\{TYPE\}\}/${TYPE}/g; s#\{\{MGMT_REPO\}\}#${MGMT_ABS}#g" "$f"
+    perl -pi -e "s/\{\{SERVICE\}\}/${SERVICE_NAME}/g; s/\{\{PROJECT\}\}/${PROJECT}/g; s/\{\{TYPE\}\}/${TYPE}/g; s#\{\{MGMT_REPO\}\}#${MGMT_ABS}#g" "$f"
   done
 
 mkdir -p "$TARGET/.sdlc" "$TARGET/sdlc/session-log" "$TARGET/sync/reports"
@@ -71,7 +166,7 @@ EOF
 
 # Verification-first: seed the feature map (feature -> requirement -> verification -> status).
 cat > "$TARGET/feature-map.md" <<EOF
-# Feature map — ${NAME}
+# Feature map — ${SERVICE_NAME}
 
 > The single place to see what this service does, which requirement it serves, and whether it is
 > verified. Update it when a feature is added or its verification changes. The tool is
@@ -82,12 +177,12 @@ cat > "$TARGET/feature-map.md" <<EOF
 | _example: GET /api/hello_ | REQ-____ | \`bash scripts/app-verify.sh itest\` → AppEndpointIT | planned |
 EOF
 
-( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${NAME} (${TYPE}) from template" ) || true
+( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${SERVICE_NAME} (${TYPE}) from template" ) || true
 
 # Register in services.json.
 REG="$MGMT_ABS/loop/04-build/services.json"
 [ -f "$REG" ] || echo '{"apiVersion":"sdlc/v1","kind":"ServiceRegistry","project":"'"$PROJECT"'","services":[]}' > "$REG"
-jq --arg name "$NAME" --arg type "$TYPE" --arg repo "$TARGET" --arg pack "${PROJECT}-cognition" '
+jq --arg name "$SERVICE_NAME" --arg type "$TYPE" --arg repo "$TARGET_ABS" --arg pack "${PROJECT}-cognition" '
   .services += [{
     name: $name, type: $type, repo: $repo, phase: "building",
     trustLevel: "L1",
@@ -95,4 +190,4 @@ jq --arg name "$NAME" --arg type "$TYPE" --arg repo "$TARGET" --arg pack "${PROJ
     cognitionPack: {name: $pack, version: "0.0.0"},
     requirements: [], updatedAt: (now | todate)
   }]' "$REG" > "$REG.tmp" && mv "$REG.tmp" "$REG"
-echo "Collected $NAME -> $TARGET ; registered in $REG"
+echo "Collected $SERVICE_NAME ($TYPE) -> $TARGET_ABS ($REPO_NAME) ; registered in $REG"

@@ -24,23 +24,24 @@
 ## 2. 快速开始
 
 ```bash
-# 0) 框架自检：应 31 项全绿
+# 0) 框架自检：应 41 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成项目管理仓（控制平面 + 实时 wiki）
 scripts/new-project.sh myproj ./myproj-management
 
-# 2) 生成服务仓（自动登记到管理仓 services.json）
-scripts/new-service-repo.sh business     order-service  ./myproj-management
-scripts/new-service-repo.sh gateway      api-gateway    ./myproj-management
-scripts/new-service-repo.sh config-server config-server  ./myproj-management
-scripts/new-service-repo.sh frontend-vue web-portal     ./myproj-management
-scripts/new-service-repo.sh infra        infra          ./myproj-management
+# 2) 生成服务仓（目录名按命名规则推导，自动登记到管理仓 services.json）
+scripts/new-service-repo.sh business   speaker  ./myproj-management        # → myproj-speaker-management
+scripts/new-service-repo.sh gateway    api      ./myproj-management        # → myproj-api-gateway
+scripts/new-service-repo.sh infra      aws      ./myproj-management        # → myproj-aws-infra
+scripts/new-service-repo.sh config-server config-server ./myproj-management # → myproj-config-server
+scripts/new-service-repo.sh configuration-data devops ./myproj-management  # → myproj-devops-configuration-data
+scripts/new-service-repo.sh configuration-data prod   ./myproj-management  # → myproj-prod-configuration-data
 
 # 3) 服务仓：改代码 → 自验 → 提交 → 采集
-cd order-service
+cd myproj-speaker-management
 bash scripts/app-verify.sh all            # build+test+lint+itest
-git add -A && git commit -m "feat: order status [learn] prefer RestClient"
+git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                     # 增量报告 + hash 链
 
 # 4) 管理仓：分析 → 看 wiki / 测试 / DORA
@@ -69,18 +70,38 @@ bash scripts/analyze-reports.sh .
 
 ---
 
-## 4. 五类服务模板
+## 4. 六类服务模板
 
 | type | 技术栈 | 生成后可独立构建 |
 |---|---|---|
 | `infra` | Terraform + Helm + Flux CD | 结构就绪（未做 terraform validate） |
 | `gateway` | Spring Boot 4.1.3 + Cloud Gateway (WebFlux) | ✅ `./gradlew assemble` |
 | `config-server` | Spring Cloud Config Server | ✅ `./gradlew assemble` |
+| `configuration-data` | Spring Cloud Config 的数据仓（按环境分仓的 yml） | 结构就绪（git 后端） |
 | `business` | Spring Boot 4.1.3 + JPA + Testcontainers + ArchUnit | ✅ `./gradlew assemble` |
 | `frontend-vue` | Vue 3 + Vite + TypeScript + Vitest | ✅ 结构/JSON 校验（npm 需联网） |
 
 每个服务仓生成时自带：`app-verify.sh`（统一验证 CLI）、`feature-map.md`（功能→验证状态）、
 `collect.yml`（push 采集）、`.sdlc/`、`.agents/skills`、`findings/`（scanner 队列）、`Makefile`。
+
+### 4.1 仓库命名规则（生成器强制）
+
+`<project>` = 管理仓目录名去掉 `-management`（`myproj-management` → `myproj`）。
+
+| 仓库用途 | 规则 | 示例 |
+|---|---|---|
+| 项目管理仓 | `<project>-management` | `ses-management` |
+| 服务仓（business / frontend-vue） | `<project>-<service>-management` | `ses-speaker-management` |
+| 网关 | `<project>-<usage>-gateway` | `ses-api-gateway` |
+| 基础设施 | `<project>-<cloud>-infra` | `ses-aws-infra` |
+| 配置服务 | `<project>-config-server` | `ses-config-server` |
+| 配置数据（生产） | `<project>-prod-configuration-data` | `ses-prod-configuration-data` |
+| 配置数据（非生产） | `<project>-devops-configuration-data` | `ses-devops-configuration-data` |
+
+- 目录名默认按规则推导；显式传入的 `target-dir` 不符合规则会**报错退出**
+  （`--allow-custom-name` 可显式绕过）。
+- `services.json` / `service.json` 的 `name` 用**短服务名**（如 `speaker`、`prod-configuration-data`），
+  仓库全名在 `repo` 字段。
 
 ---
 
@@ -105,7 +126,7 @@ README.md / DELIVERY.md          入口 + 交付清单与使用手册
 AGENTS.md / CLAUDE.md / REVIEW.md  agent 指令、快速参考、评审策略
 DESIGN.md / HANDOVER.md          设计基线 + 交接
 templates/project-management/    管理仓模板（loop/execution/knowledge/wiki/sync/intake）
-templates/service-types/         5 类服务模板 + _shared（Gradle 脚手架）
+templates/service-types/         6 类服务模板 + _shared（Gradle 脚手架）
 schemas/                         execution-report / service-registry / cognition-pack
 scripts/                         生成器 + 闭环 + 验证（见 scripts/README.md）
 .agents/skills/                   19 个技能（Agent Skills 标准，规范源）
@@ -132,7 +153,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（31 项）。
+- 框架自检：`bash scripts/selftest.sh`（41 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -143,7 +164,7 @@ bash scripts/autopilot-gate.sh
 ```bash
 # 管理仓：proposals → 人工签核 → pack 版本化 → 下发
 bash scripts/promote-proposal.sh . P-<service>-<slug> <owner> deterministic
-bash scripts/sync-cognition.sh . ../order-service
+bash scripts/sync-cognition.sh . ../myproj-speaker-management
 ```
 
 - AI/CI 只写 `knowledge/proposals/`；`knowledge/pack.json` 的 active 条目**必须人工签核**（D19）。
@@ -191,4 +212,4 @@ bash scripts/sync-cognition.sh . ../order-service
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 31 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 41 passed, 0 failed`。

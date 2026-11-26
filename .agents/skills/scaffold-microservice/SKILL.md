@@ -14,10 +14,14 @@ description: 生成一个新的 Spring Cloud 微服务仓（k8s 原生发现 / C
 2. 在**框架仓**运行：
 
    ```bash
-   scripts/new-service-repo.sh <type> <name> <management-repo> [target]
+   scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
    ```
 
-   `type` ∈ `business | gateway | config-server | frontend-vue | infra`。它会：
+   `type` ∈ `business | gateway | config-server | configuration-data | frontend-vue | infra`。
+   **目录名由命名规则推导**（`<project>` = 管理仓名去掉 `-management`）：
+   `business`/`frontend-vue` → `<project>-<service>-management`、`gateway` → `<project>-<usage>-gateway`、
+   `infra` → `<project>-<cloud>-infra`、`config-server` → `<project>-config-server`、
+   `configuration-data` → `<project>-<prod|devops>-configuration-data`。显式 `target-dir` 不符合规则会报错。它会：
    - 复制类型模板 + `_shared`（platform BOM / Gradle wrapper / checkstyle / Makefile）；
    - 渲染 `service.json`、`.sdlc/config.json`、`README.md`、`AGENTS.md`；
    - 复制 `.sdlc/collect.sh`、`scripts/app-verify.sh`、`scripts/autopilot-gate.sh`、`scripts/scan-findings.sh`；
@@ -31,7 +35,7 @@ description: 生成一个新的 Spring Cloud 微服务仓（k8s 原生发现 / C
    bash scripts/app-verify.sh all     # build+test+lint+itest
    ```
 
-4. 网关路由：在 infra 仓 `config/gateway.yml` 加 `Path=/api/<base>/**` → `lb://<name>`。
+4. 网关路由：在 `<project>-devops-configuration-data` 仓的 `gateway.yml` 加 `Path=/api/<base>/**` → `lb://<name>`；生产覆盖写 `<project>-prod-configuration-data`。
 5. 提交 scaffold，再按接受的 plan 实现行为（没有接受 plan 不 scaffold）。
 
 ## 约定

@@ -6,8 +6,8 @@ spring:
     name: config-server
   profiles:
     # 本地默认：native 文件系统后端，读 ./config/。
-    # 生产：启用 `git` profile（取消注释），让服务器从 infra 仓 config/ 读取
-    # 按服务、按环境的配置。
+    # 生产/非生产：启用 `git` profile，从对应环境的配置数据仓读取
+    # （<project>-prod-configuration-data / <project>-devops-configuration-data）。
     active: native
   cloud:
     config:
@@ -15,8 +15,8 @@ spring:
         native:
           search-locations: ${CONFIG_SEARCH_LOCATIONS:file:./config/}
         # git:
-        #   uri: ${CONFIG_GIT_URI:https://github.com/<org>/<project>-infra.git}
-        #   search-paths: config
+        #   uri: ${CONFIG_GIT_URI:https://github.com/<org>/<project>-prod-configuration-data.git}
+        #   search-paths: .
         #   default-label: main
         #   clone-on-start: true
 

@@ -32,7 +32,7 @@
 - 以本框架为模板，每个新项目生成一个**项目实例**。
 - 实例中管理：**客户意图、真正的需求、页面设计、功能/架构设计**。
 - 通过模板分别创建微服务，**每个微服务是单独 repo**（本地生成，D2）。
-- **5 类服务模板**：基础设施（Helm/Terraform/GitOps）、gateway、config server、业务服务、前端（Vue）。
+- **6 类服务模板**：基础设施（Helm/Terraform/GitOps）、gateway、config server、配置数据（prod/devops 分仓）、业务服务、前端（Vue）。
 - 生成服务时**登记到开发管理**；服务状态/技术决策/架构变更**自动同步回管理仓**，闭环。
 - **测试管理**纳入管理仓。
 
@@ -103,6 +103,7 @@ project-management 仓       → 控制平面 + 实时 wiki
 infra 仓                    → Terraform + Helm + Flux GitOps
 gateway 仓                  → Spring Cloud Gateway
 config-server 仓            → Spring Cloud Config
+configuration-data 仓       → Spring Cloud Config 数据（prod / devops 分仓）
 business 仓（可多个）        → Spring Boot 业务服务
 frontend-vue 仓             → Vue 3 + Vite
 ```
@@ -231,16 +232,16 @@ frontend-vue 仓             → Vue 3 + Vite
 | 指令 | `AGENTS.md`、`CLAUDE.md`、`REVIEW.md`（已中文化） |
 | 技能 | `.agents/skills/` **19 个** |
 | 子代理 | `.claude/.codex/.opencode` 各 **8 个**（含 `scanner`） |
-| 模板 | `templates/project-management/` + 5 类服务模板 + `_shared` |
+| 模板 | `templates/project-management/` + 6 类服务模板 + `_shared` |
 | 生成器 | `scripts/new-project.sh` / `new-service-repo.sh`（本地，不建远端仓） |
 | 闭环 | `collect.sh` / `analyze-reports.sh` / `promote-proposal.sh` / `sync-cognition.sh` / `upload-report.sh` |
-| 验证 | `scripts/selftest.sh`（**31 项**）、`scripts/validate-skills.sh` |
+| 验证 | `scripts/selftest.sh`（**41 项**）、`scripts/validate-skills.sh` |
 | 护栏 | `hooks/`、`.githooks/`、CI、`autopilot-gate.sh`、`scan-findings.sh` |
 | 认知 | proposal → 人工签核 → pack 版本化 → 下发；`repeat` 蒸馏（D4） |
 | 情报 | `intake/` + `intake-signal.sh`（Slack/Linear/邮件） |
 | 度量 | `wiki/dora.md`（部署频率/变更失败率/lead time/MTTR） |
 
-**已验证**：`bash scripts/selftest.sh` → **31/31**；`validate-skills.sh` OK（19 skills / 8 agents）；
+**已验证**：`bash scripts/selftest.sh` → **41/41**；`validate-skills.sh` OK（19 skills / 8 agents）；
 gateway/config-server/business 独立仓 `./gradlew assemble` 通过。
 
 ### 5.2 尚未实现 / 用户侧待办
@@ -256,7 +257,7 @@ gateway/config-server/business 独立仓 `./gradlew assemble` 通过。
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| **P1** | 5 类服务模板 + 生成器 + 管理仓骨架 + 采集/分析契约（本地，含 hash 链字段） | demo 项目 + 2 服务仓，跑通"执行→报告→分析→wiki" |
+| **P1** | 6 类服务模板 + 生成器 + 管理仓骨架 + 采集/分析契约（本地，含 hash 链字段） | demo 项目 + 3 服务仓，跑通"执行→报告→分析→wiki" |
 | **P2** | analyze-reports 定时/手动 + 上传通道 | 定时/手动各触发一次 |
 | **P3** | cognition pack 版本化 + 服务仓锁定/升级（本地 diff 模拟） | 一条约束从报告进入服务仓 hooks/skills |
 | **P4** | 测试管理 + 认知看板（DORA） | 测试与认知 wiki 自动更新 |

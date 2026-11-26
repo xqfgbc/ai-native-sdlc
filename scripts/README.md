@@ -7,7 +7,12 @@
 | 命令 | 用途 |
 |---|---|
 | `new-project.sh <project> [target]` | 生成项目管理仓（loop/execution/knowledge/wiki/sync + 自包含脚本） |
-| `new-service-repo.sh <type> <name> <mgmt> [target]` | 生成服务仓并登记到管理仓 |
+| `new-service-repo.sh <type> <name> <mgmt> [target] [--allow-custom-name]` | 生成服务仓并登记到管理仓；目录名按命名规则推导（见下） |
+| `new-service-repo.sh --print-name <type> <name> <mgmt>` | 只打印按规则推导的仓库名（无副作用） |
+
+命名规则（`<project>` = 管理仓名去掉 `-management`）：`business`/`frontend-vue` → `<project>-<service>-management`；
+`gateway` → `<project>-<usage>-gateway`；`infra` → `<project>-<cloud>-infra`；
+`config-server` → `<project>-config-server`；`configuration-data` → `<project>-<prod|devops>-configuration-data`。
 
 ## 闭环
 

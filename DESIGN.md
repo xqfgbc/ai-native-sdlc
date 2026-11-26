@@ -72,6 +72,7 @@
 | `infra` | Terraform + Helm + Flux GitOps | 服务模板 `infra` |
 | `gateway` | Spring Cloud Gateway | 服务模板 `gateway` |
 | `config-server` | Spring Cloud Config | 服务模板 `config-server` |
+| `configuration-data`（prod / devops） | Spring Cloud Config 数据仓（yml） | 服务模板 `configuration-data` |
 | `business`（可多个） | Spring Boot 业务服务 | 服务模板 `business` |
 | `frontend-vue` | Vue 3 + Vite | 服务模板 `frontend-vue` |
 
@@ -220,7 +221,7 @@ spec:
 
 ---
 
-## 9. 五类服务模板
+## 9. 六类服务模板
 
 每个模板统一包含（D8/D13/D20）：
 
@@ -234,6 +235,7 @@ spec:
 | infra | Terraform + Helm + Flux | overlay、镜像策略、变更影响面 |
 | gateway | Boot 4 + Cloud Gateway | 路由表 → context |
 | config-server | Spring Cloud Config | 配置源 → context |
+| configuration-data | Spring Cloud Config 数据仓（yml） | 按环境分仓（prod / devops） |
 | business | Boot 4 + ArchUnit + Testcontainers `@ServiceConnection` | 现有脚手架 |
 | frontend-vue | Vue3 + Vite + TS + Pinia + Vitest/Playwright | UI 变更报告 |
 
@@ -302,7 +304,7 @@ spec:
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| **P1** | 5 模板 + 生成器 + 管理仓骨架 + 采集/分析契约（本地，含 hash 链字段） | demo 项目 + 2 服务仓，跑通"执行→报告→分析→wiki" |
+| **P1** | 6 模板 + 生成器 + 管理仓骨架 + 采集/分析契约（本地，含 hash 链字段） | demo 项目 + 3 服务仓，跑通"执行→报告→分析→wiki" |
 | **P2** | analyze-reports 定时/手动 + 上传通道 | 定时/手动各触发一次 |
 | **P3** | cognition pack 版本化 + 服务仓锁定/升级（本地 diff 模拟） | 一条约束从报告进入服务仓 hooks/skills |
 | **P4** | 测试管理 + 认知看板（DORA） | 测试与认知 wiki 自动更新 |
@@ -316,7 +318,7 @@ spec:
 3. 服务仓 commit → 采集器产出报告（facts 确定性、candidateKnowledge 带 evidenceRef、prevHash）。
 4. 报告上传管理仓（幂等）→ analyzer 生成 wiki + proposals（不自动 active）。
 5. `validate` 校验注册表/报告/pack 一致性通过。
-6. `bash scripts/selftest.sh`（31 项）+ `validate-skills.sh` 绿。
+6. `bash scripts/selftest.sh`（41 项）+ `validate-skills.sh` 绿。
 
 ---
 

@@ -16,7 +16,7 @@
         "required": ["name", "type", "repo", "phase", "requirements"],
         "properties": {
           "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-          "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue"] },
+          "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue", "configuration-data"] },
           "repo": { "type": "string", "description": "Repository path (local dir or org/repo)." },
           "phase": { "enum": ["planned", "building", "testing", "deployed", "maintained"] },
           "trustLevel": { "enum": ["L0", "L1", "L2", "L3"], "description": "Trust ladder: L0 manual, L1 verify loop, L2 multi-agent, L3 autopilot." },
