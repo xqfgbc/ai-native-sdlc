@@ -16,8 +16,15 @@ has_jq=0
 command -v jq >/dev/null 2>&1 && has_jq=1
 
 files=""
+# Never block on an open pipe with no data (CI / agent shells): regular-file
+# stdin is read in full; otherwise read one line with a 1s bound.
 if [ "$has_jq" -eq 1 ] && [ ! -t 0 ]; then
-  payload="$(cat 2>/dev/null || true)"
+  payload=""
+  if [ -f /dev/stdin ]; then
+    payload="$(cat 2>/dev/null || true)"
+  else
+    IFS= read -r -t 1 payload || true
+  fi
   if [ -n "$payload" ]; then
     p="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)"
     [ -n "$p" ] && files="$p"

@@ -11,8 +11,16 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 files=""
 # Agent PreToolUse JSON on stdin (Claude Code / Codex) — file to be written.
+# Never block on an open pipe with no data (CI / agent shells): a regular-file
+# stdin is read in full; otherwise read one line with a 1s bound (agent hooks
+# send a single JSON line).
 if [ ! -t 0 ]; then
-  payload="$(cat 2>/dev/null || true)"
+  payload=""
+  if [ -f /dev/stdin ]; then
+    payload="$(cat 2>/dev/null || true)"
+  else
+    IFS= read -r -t 1 payload || true
+  fi
   if [ -n "$payload" ]; then
     p="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)"
     [ -n "$p" ] && files="$p"
@@ -42,7 +50,9 @@ while IFS= read -r f; do
     continue
   fi
   if [ -f "$f" ]; then
-    if grep -InE "$blocked_content" "$f" 2>/dev/null; then
+    # -e is required: the pattern starts with "-----BEGIN", which grep would
+    # otherwise parse as an option.
+    if grep -InE -e "$blocked_content" "$f" 2>/dev/null; then
       found=1
     fi
   fi

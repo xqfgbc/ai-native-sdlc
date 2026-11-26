@@ -17,3 +17,6 @@
 | `test-freeze.sh` | `CLAUDE_FIX_TASK=1` 期间拦截测试编辑 | PreToolUse |
 
 这些是"建议性技能"背后的确定性层（见 `AGENTS.md` §1）：技能让违规变少，hook 让违规不可能。
+
+stdin 读取都有上界：普通文件整读，其他非 TTY 输入只读一行且最多等 1 秒——所以 stdin 是
+未关闭的管道时，hook 会退回 git 模式而不是挂起。

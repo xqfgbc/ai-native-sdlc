@@ -24,7 +24,7 @@
 ## 2. 快速开始
 
 ```bash
-# 0) 框架自检：应 43 项全绿
+# 0) 框架自检：应 46 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -154,7 +154,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（43 项）。
+- 框架自检：`bash scripts/selftest.sh`（46 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -213,4 +213,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 43 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 46 passed, 0 failed`。

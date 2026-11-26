@@ -116,7 +116,27 @@ else
   bad "no proposal to promote"
 fi
 
-# 6. framework skills config
+# 6. deterministic guard hooks (agent mode works; stdin can never hang them)
+printf 'clean\n' > "$WORK/clean.txt"
+if ns_out="$(printf '{"tool_input":{"file_path":"%s"}}' "$WORK/clean.txt" | "$ROOT/hooks/no-secrets.sh" 2>&1)"; then
+  printf '%s\n' "$ns_out" | grep -qx 'no-secrets: clean' && ok "no-secrets hook scans agent stdin JSON" || bad "no-secrets agent mode"
+else
+  bad "no-secrets agent mode"
+fi
+# Build the fake secret at runtime so this fixture does not trip the hook itself.
+printf 'AKIA%s\n' 'ABCDEFGHIJKLMNOP' > "$WORK/leak.txt"
+if ns_out="$(printf '{"tool_input":{"file_path":"%s"}}' "$WORK/leak.txt" | "$ROOT/hooks/no-secrets.sh" 2>&1)"; then
+  bad "no-secrets blocks a secret from agent stdin"
+else
+  printf '%s' "$ns_out" | grep -q 'AKIA' && ok "no-secrets blocks a secret from agent stdin" || bad "no-secrets blocks a secret from agent stdin"
+fi
+# An open pipe with no data must not block the hook (watchdog kills it otherwise).
+( "$ROOT/hooks/no-secrets.sh" < <(sleep 5) >"$WORK/no-secrets.out" 2>&1 ) & ns_pid=$!
+( for _ in 1 2 3 4 5 6 7 8; do sleep 1; kill -0 "$ns_pid" 2>/dev/null || exit 0; done; kill "$ns_pid" 2>/dev/null ) &
+if wait "$ns_pid" 2>/dev/null; then ns_rc=0; else ns_rc=$?; fi
+[ "$ns_rc" -le 1 ] && [ -s "$WORK/no-secrets.out" ] && ok "no-secrets hook does not block on an open stdin pipe" || bad "no-secrets stdin hang"
+
+# 7. framework skills config
 "$ROOT/scripts/validate-skills.sh" >/dev/null && ok "validate-skills passes" || bad "validate-skills"
 
 echo ""
