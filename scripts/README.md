@@ -34,6 +34,7 @@
 |---|---|
 | `install-hooks.sh` | 启用本仓 `.githooks`（`core.hooksPath`）；幂等，clone 后/会话开始先跑 |
 | `signoff.py [--port 8765]` | 本地网页签核工具（仅 127.0.0.1）：AI 预判 + owner/enforcement → promote/debt/sync |
+| `cognition.sh [version|list|show|context] [--json]` | 读取已签核 active 认知（服务仓取 `.sdlc/cognition-pack.json`） |
 | `debt.sh <add|list|due|close|report>` | 项目债务登记表（control-plane `loop/07-maintain/debt/debt.json`） |
 | `review-proposals.sh [stats|record]` | AI 预判/人工决定记录/一致率统计（不激活） |
 | `sync-cognition-remote.sh <mgmt> <org/repo>` | 对无本地副本的服务仓开认知包升级 PR |

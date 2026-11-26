@@ -157,10 +157,11 @@ mkdir -p "$TARGET/.codex"
 cp "$ROOT/.codex/hooks.json" "$TARGET/.codex/" 2>/dev/null || true
 cp "$ROOT/scripts/validate-skills.sh" "$TARGET/scripts/" 2>/dev/null || true
 cp "$ROOT/scripts/install-hooks.sh" "$TARGET/scripts/" 2>/dev/null || true
-cp "$ROOT/scripts/debt.sh" "$TARGET/scripts/" 2>/dev/null || true
+cp "$ROOT/scripts/debt.sh" "$ROOT/scripts/cognition.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/validate-skills.sh" ] && chmod +x "$TARGET/scripts/validate-skills.sh"
 [ -f "$TARGET/scripts/install-hooks.sh" ] && chmod +x "$TARGET/scripts/install-hooks.sh"
 [ -f "$TARGET/scripts/debt.sh" ] && chmod +x "$TARGET/scripts/debt.sh"
+[ -f "$TARGET/scripts/cognition.sh" ] && chmod +x "$TARGET/scripts/cognition.sh"
 # P2: remote push channel for reports.
 cp "$ROOT/scripts/upload-report.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/upload-report.sh" ] && chmod +x "$TARGET/scripts/upload-report.sh"

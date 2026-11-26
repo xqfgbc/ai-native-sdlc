@@ -214,6 +214,10 @@ if [ -n "$prop" ]; then
   [ -f "$WORK/demo-control-plane/knowledge/constraints/$prop.json" ] && ok "promoted item lands in knowledge/constraints" || bad "constraint directory"
   ( cd "$WORK/demo-control-plane" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
   [ -f "$WORK/demo-order-service-management/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
+  grep -q "$prop" "$WORK/demo-order-service-management/CLAUDE.md" && ok "sync renders active cognition into CLAUDE.md" || bad "cognition block"
+  hook_out="$( cd "$WORK/demo-order-service-management" && bash hooks/cognition-context.sh 2>&1 )"
+  printf '%s' "$hook_out" | grep -q "$prop" \
+    && ok "session hook surfaces active cognition" || { echo "  hook: $hook_out"; bad "cognition hook"; }
 else
   bad "no proposal to promote"
 fi

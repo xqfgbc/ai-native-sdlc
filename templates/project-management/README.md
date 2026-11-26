@@ -29,6 +29,19 @@ python3 scripts/signoff.py            # http://127.0.0.1:8765
 页面展示 AI 预判（建议/置信度/理由），填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，
 确认后签核，或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR（优先 gh；无 gh 时用 `GH_TOKEN` 直连 API；两者都没有则打印网页修改指引）。
 
+### 认知如何到达 AI
+
+签核后的 active 条目会在 `sync-cognition.sh` 时渲染进服务仓的 `CLAUDE.md` / `AGENTS.md`
+（managed block，勿手改），并在 Claude Code 会话开始时由 `hooks/cognition-context.sh` 注入上下文；
+Agent 也可随时查询：
+
+```bash
+bash scripts/cognition.sh list --json
+bash scripts/cognition.sh context
+```
+
+deterministic 条目由 hook/ArchUnit/lint/CI 强制，advisory 条目靠注入与评审执行。
+
 ### 债务与复盘
 
 债务表在 `loop/07-maintain/debt/debt.json`，覆盖 intent/design/build/test/deploy/ops/security：
