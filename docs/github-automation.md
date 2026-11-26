@@ -25,7 +25,7 @@
 ## 需要的配置
 
 在**服务仓**设置：
-- Variable `MANAGEMENT_REPO` = `org/<project>-management`
+- Variable `MANAGEMENT_REPO` = `org/<project>-control-plane`
 - Secret `SYNC_TOKEN` = GitHub App 安装令牌或 fine-grained PAT
 
 在**管理仓**：

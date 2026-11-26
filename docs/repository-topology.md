@@ -3,7 +3,7 @@
 本框架把代码分成五类仓库：
 
 1. **框架仓（本仓）** —— 模板 + 生成器 + 公共 skills/hooks，不承载业务代码。
-2. **项目管理仓**（`scripts/new-project.sh` 生成）—— 控制平面 + 实时 wiki + 执行事实 + 认知沉淀。
+2. **项目管理仓（控制平面）**（`scripts/new-project.sh` 生成，`<project>-control-plane`）—— 控制平面 + 实时 wiki + 执行事实 + 认知沉淀。
 3. **服务仓**（`scripts/new-service-repo.sh` 生成）—— 每类服务一个独立仓，可独立构建；6 类：`infra`、`gateway`、`config-server`、`configuration-data`、`business`、`frontend-vue`。
 4. **infra 仓**（`infra` 模板生成）—— Terraform + Helm + Flux CD，GitOps 真相源。
 5. **配置数据仓**（`configuration-data` 模板生成，按环境分仓）—— Spring Cloud Config 的 git 后端：

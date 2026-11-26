@@ -1,7 +1,7 @@
 name: Collect execution report
 
 # Incremental collector on every push; if configured, opens a PR with the report in the
-# management repo. Set the repo variable MANAGEMENT_REPO=org/<project>-management and the
+# management repo. Set the repo variable MANAGEMENT_REPO=org/<project>-control-plane and the
 # secret SYNC_TOKEN (GitHub App / fine-grained PAT). See docs/github-automation.md.
 on:
   push:

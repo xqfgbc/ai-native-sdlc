@@ -1,15 +1,15 @@
 # Project factory — 使用指南
 
-本仓库是 **AI-Native SDLC 的工厂/模板仓**：它生成「项目管理仓 + 服务仓」，不承载业务代码。
+本仓库是 **AI-Native SDLC 的工厂/模板仓**：它生成「控制平面仓 + 服务仓」，不承载业务代码。
 
 ## 1. 生成一个项目
 
 ```bash
 scripts/new-project.sh <project> [target-dir]
-# 例：scripts/new-project.sh orders ./orders-management
+# 例：scripts/new-project.sh orders ./orders-control-plane
 ```
 
-产出 `<project>-management/`，包含：
+产出 `<project>-control-plane/`，包含：
 
 ```
 loop/                 外环 SDLC（00 constitution → 01 intent → … → 07 maintain）
@@ -24,7 +24,7 @@ scripts/              自包含的 analyzer/validator（analyze-reports.sh / val
 
 ```bash
 scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
-# 例：scripts/new-service-repo.sh business speaker ./ses-management   # → ./ses-speaker-management
+# 例：scripts/new-service-repo.sh business speaker ./ses-control-plane   # → ./ses-speaker-management
 ```
 
 6 类 `type`：
@@ -40,11 +40,12 @@ scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allo
 
 ### 命名规则（生成器强制）
 
-`<project>` = 管理仓名去掉 `-management`。目录名默认按规则推导；显式 `target-dir` 不符合规则会报错
+`<project>` = 控制仓名去掉 `-control-plane`（旧项目名 `<project>-management` 仍兼容）。目录名默认按规则推导；显式 `target-dir` 不符合规则会报错
 （`--allow-custom-name` 可绕过）。`--print-name` 只打印推导结果，无副作用。
 
 | 用途 | 规则 | `<project>=ses` 示例 | `name` 参数 |
 |---|---|---|---|
+| 控制平面（项目管理仓） | `<project>-control-plane` | `ses-control-plane` | — |
 | 服务仓（business / frontend-vue） | `<project>-<service>-management` | `ses-speaker-management` | `speaker` |
 | gateway | `<project>-<usage>-gateway` | `ses-api-gateway` | `api` |
 | infra | `<project>-<cloud>-infra` | `ses-aws-infra` | `aws` |

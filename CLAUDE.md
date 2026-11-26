@@ -17,7 +17,7 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 
 ## 框架仓验证（根目录没有 Gradle 工程）
 
-- `bash scripts/selftest.sh` —— 应 **41 项全绿**
+- `bash scripts/selftest.sh` —— 应 **43 项全绿**
 - `./scripts/validate-skills.sh` —— 应 **OK（19 skills / 8 agents）**
 - `bash -n scripts/*.sh` —— shell 语法检查
 
@@ -49,13 +49,14 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 - Testcontainers 用 `@ServiceConnection`（非 `@DynamicPropertySource`）
 - 服务名 kebab-case；端口 config-server 8888、gateway 8080、业务 8081+
 - 新服务在框架仓用 `scripts/new-service-repo.sh` 生成，不要手写模块
-- 仓库命名由生成器强制：business/frontend-vue `<project>-<service>-management`、gateway
+- 仓库命名由生成器强制：控制平面 `<project>-control-plane`、business/frontend-vue `<project>-<service>-management`、gateway
   `<project>-<usage>-gateway`、infra `<project>-<cloud>-infra`、config-server `<project>-config-server`、
   configuration-data `<project>-<prod|devops>-configuration-data`（`--allow-custom-name` 可绕过）
 
 ## 架构
 
-- `config-server` —— 配置服务；源在 infra 仓 `config/`（或独立 config 仓）
+- `config-server` —— 配置服务；本地 `config/` native，生产/非生产从 `<project>-prod-configuration-data` /
+  `<project>-devops-configuration-data` 的 git 后端读取
 - `gateway` —— Spring Cloud Gateway（WebFlux）；`Path=/api/<base>/**` → `lb://<service>`
 - 业务服务 —— 独立服务仓，继承 platform BOM
 - 部署 —— GitOps（infra 仓 Flux reconcile）；CI 只构建/测试/推 ECR

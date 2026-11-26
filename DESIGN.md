@@ -83,7 +83,7 @@
 ## 4. 项目管理仓（控制平面）结构
 
 ```
-<project>-management/
+<project>-control-plane/
 ├── AGENTS.md / CLAUDE.md          # 外层规则 + 会话协议
 ├── README.md                      # wiki 首页（生成）
 ├── loop/                          # 【外环】项目级 SDLC
@@ -318,7 +318,7 @@ spec:
 3. 服务仓 commit → 采集器产出报告（facts 确定性、candidateKnowledge 带 evidenceRef、prevHash）。
 4. 报告上传管理仓（幂等）→ analyzer 生成 wiki + proposals（不自动 active）。
 5. `validate` 校验注册表/报告/pack 一致性通过。
-6. `bash scripts/selftest.sh`（41 项）+ `validate-skills.sh` 绿。
+6. `bash scripts/selftest.sh`（43 项）+ `validate-skills.sh` 绿。
 
 ---
 

@@ -72,8 +72,8 @@ research/                              上游研究（playbook、Spring 坑、Gi
 
 ```bash
 $ bash scripts/selftest.sh
-... 41 项 PASS ...
-selftest: 41 passed, 0 failed
+... 43 项 PASS ...
+selftest: 43 passed, 0 failed
 
 $ ./scripts/validate-skills.sh
 validate-skills: OK (19 skills, 8 agents)
@@ -100,21 +100,21 @@ validate-skills: OK (19 skills, 8 agents)
 
 ```bash
 # 1) 生成一个项目管理仓
-scripts/new-project.sh myproj ./myproj-management
+scripts/new-project.sh myproj ./myproj-control-plane
 
 # 2) 生成服务仓（目录名按命名规则推导；自动登记到管理仓 services.json）
-scripts/new-service-repo.sh business speaker ./myproj-management        # → myproj-speaker-management
-scripts/new-service-repo.sh gateway api ./myproj-management             # → myproj-api-gateway
-scripts/new-service-repo.sh config-server config-server ./myproj-management   # → myproj-config-server
-scripts/new-service-repo.sh configuration-data devops ./myproj-management     # → myproj-devops-configuration-data
-scripts/new-service-repo.sh configuration-data prod ./myproj-management       # → myproj-prod-configuration-data
-scripts/new-service-repo.sh infra aws ./myproj-management               # → myproj-aws-infra
+scripts/new-service-repo.sh business speaker ./myproj-control-plane        # → myproj-speaker-management
+scripts/new-service-repo.sh gateway api ./myproj-control-plane             # → myproj-api-gateway
+scripts/new-service-repo.sh config-server config-server ./myproj-control-plane   # → myproj-config-server
+scripts/new-service-repo.sh configuration-data devops ./myproj-control-plane     # → myproj-devops-configuration-data
+scripts/new-service-repo.sh configuration-data prod ./myproj-control-plane       # → myproj-prod-configuration-data
+scripts/new-service-repo.sh infra aws ./myproj-control-plane               # → myproj-aws-infra
 
 # 3) 在服务仓里开发并提交 → 自动采集 → 管理仓分析
 cd myproj-speaker-management
 git add -A && git commit -m "feat: speaker status [learn] prefer RestClient over RestTemplate"
 bash .sdlc/collect.sh
-cd ../myproj-management && bash scripts/analyze-reports.sh .
+cd ../myproj-control-plane && bash scripts/analyze-reports.sh .
 ```
 
 > 一行验证框架自身：`bash scripts/selftest.sh`
@@ -124,12 +124,12 @@ cd ../myproj-management && bash scripts/analyze-reports.sh .
 | 仓库 | 角色 |
 |---|---|
 | 框架仓（本仓） | 模板 + 生成器 + 公共 skills/hooks |
-| `<project>-management` | 控制平面 + 实时 wiki（外环 SDLC + 执行事实 + 认知沉淀） |
-| `<project>-infra` | Terraform + Helm + Flux GitOps |
-| `<project>-gateway` | Spring Cloud Gateway |
-| `<project>-config-server` | Spring Cloud Config |
-| `<project>-<service>` | Spring Boot 业务服务 |
-| `<project>-web` | Vue 3 前端 |
+| `<project>-control-plane` | 控制平面 + 实时 wiki（外环 SDLC + 执行事实 + 认知沉淀） |
+| `<project>-<cloud>-infra` | Terraform + Helm + Flux GitOps（如 `ses-aws-infra`） |
+| `<project>-<usage>-gateway` | Spring Cloud Gateway（如 `ses-api-gateway`） |
+| `<project>-config-server` | Spring Cloud Config（如 `ses-config-server`） |
+| `<project>-<prod\|devops>-configuration-data` | Spring Cloud Config 的 git 后端（按环境分仓） |
+| `<project>-<service>-management` | 业务服务 / 前端（business、frontend-vue，如 `ses-speaker-management`） |
 
 ## 3. 管理仓（控制平面）结构
 
@@ -185,7 +185,7 @@ bash scripts/validate-project.sh .
 
 ## 7. GitHub 自动化（可选，P2）
 
-1. 在服务仓设置 Variable `MANAGEMENT_REPO=org/<project>-management`、Secret `SYNC_TOKEN`。
+1. 在服务仓设置 Variable `MANAGEMENT_REPO=org/<project>-control-plane`、Secret `SYNC_TOKEN`。
 2. `.github/workflows/collect.yml` 在 push 时采集并调用 `scripts/upload-report.sh` **开 PR** 到管理仓。
 3. 管理仓 `analyze-reports.yml` 定时/手动分析；`execution/**` 报告可自动合并，`knowledge/pack.json` 必须人工。
 4. 最小权限与权限配置见 `docs/github-automation.md`。
@@ -260,12 +260,12 @@ bash scripts/validate-project.sh .
 ## 13. 现在怎么用（端到端一次跑通）
 
 ```bash
-# 0) 框架自检（应 41 项全绿）
+# 0) 框架自检（应 43 项全绿）
 bash scripts/selftest.sh
 
 # 1) 生成项目 + 服务
-scripts/new-project.sh myproj ./myproj-management
-scripts/new-service-repo.sh business speaker ./myproj-management   # → myproj-speaker-management
+scripts/new-project.sh myproj ./myproj-control-plane
+scripts/new-service-repo.sh business speaker ./myproj-control-plane   # → myproj-speaker-management
 
 # 2) 服务仓：改功能 → 先自验 → 更新 feature-map → 提交 → 采集
 cd myproj-speaker-management
@@ -275,7 +275,7 @@ git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                   # 增量报告 + hash 链
 
 # 3) 管理仓：分析 → 看 wiki / 测试 / DORA
-cd ../myproj-management
+cd ../myproj-control-plane
 bash scripts/analyze-reports.sh .
 ls wiki/ loop/05-test/                  # index/dora/testing + results
 

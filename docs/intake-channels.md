@@ -12,7 +12,7 @@
 curl -X POST \
   -H "Authorization: token $GH_TOKEN" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/<org>/<project>-management/dispatches" \
+  "https://api.github.com/repos/<org>/<project>-control-plane/dispatches" \
   -d '{"event_type":"intake-signal","client_payload":{"tag":"onboarding","title":"客户反馈：注册太慢","body":"ticket #4821 ..."}}'
 ```
 

@@ -24,19 +24,19 @@
 ## 2. 快速开始
 
 ```bash
-# 0) 框架自检：应 41 项全绿
+# 0) 框架自检：应 43 项全绿
 bash scripts/selftest.sh
 
-# 1) 生成项目管理仓（控制平面 + 实时 wiki）
-scripts/new-project.sh myproj ./myproj-management
+# 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
+scripts/new-project.sh myproj ./myproj-control-plane
 
 # 2) 生成服务仓（目录名按命名规则推导，自动登记到管理仓 services.json）
-scripts/new-service-repo.sh business   speaker  ./myproj-management        # → myproj-speaker-management
-scripts/new-service-repo.sh gateway    api      ./myproj-management        # → myproj-api-gateway
-scripts/new-service-repo.sh infra      aws      ./myproj-management        # → myproj-aws-infra
-scripts/new-service-repo.sh config-server config-server ./myproj-management # → myproj-config-server
-scripts/new-service-repo.sh configuration-data devops ./myproj-management  # → myproj-devops-configuration-data
-scripts/new-service-repo.sh configuration-data prod   ./myproj-management  # → myproj-prod-configuration-data
+scripts/new-service-repo.sh business   speaker  ./myproj-control-plane        # → myproj-speaker-management
+scripts/new-service-repo.sh gateway    api      ./myproj-control-plane        # → myproj-api-gateway
+scripts/new-service-repo.sh infra      aws      ./myproj-control-plane        # → myproj-aws-infra
+scripts/new-service-repo.sh config-server config-server ./myproj-control-plane # → myproj-config-server
+scripts/new-service-repo.sh configuration-data devops ./myproj-control-plane  # → myproj-devops-configuration-data
+scripts/new-service-repo.sh configuration-data prod   ./myproj-control-plane  # → myproj-prod-configuration-data
 
 # 3) 服务仓：改代码 → 自验 → 提交 → 采集
 cd myproj-speaker-management
@@ -45,7 +45,7 @@ git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                     # 增量报告 + hash 链
 
 # 4) 管理仓：分析 → 看 wiki / 测试 / DORA
-cd ../myproj-management
+cd ../myproj-control-plane
 bash scripts/analyze-reports.sh .
 ```
 
@@ -86,11 +86,12 @@ bash scripts/analyze-reports.sh .
 
 ### 4.1 仓库命名规则（生成器强制）
 
-`<project>` = 管理仓目录名去掉 `-management`（`myproj-management` → `myproj`）。
+`<project>` = 控制仓目录名去掉 `-control-plane`（`myproj-control-plane` → `myproj`；旧项目名
+`<project>-management` 仍兼容）。
 
 | 仓库用途 | 规则 | 示例 |
 |---|---|---|
-| 项目管理仓 | `<project>-management` | `ses-management` |
+| 项目控制平面（管理仓） | `<project>-control-plane` | `ses-control-plane` |
 | 服务仓（business / frontend-vue） | `<project>-<service>-management` | `ses-speaker-management` |
 | 网关 | `<project>-<usage>-gateway` | `ses-api-gateway` |
 | 基础设施 | `<project>-<cloud>-infra` | `ses-aws-infra` |
@@ -153,7 +154,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（41 项）。
+- 框架自检：`bash scripts/selftest.sh`（43 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -212,4 +213,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 41 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 43 passed, 0 failed`。

@@ -1,12 +1,45 @@
 #!/usr/bin/env bash
-# scripts/new-project.sh — generate a project-management repo from the template.
-# Usage: scripts/new-project.sh <project> [target-dir]
+# scripts/new-project.sh — generate a project control-plane repo from the template.
+#
+# Repo naming rule: <project>-control-plane   e.g. ses-control-plane
+# (legacy projects named <project>-management are still accepted by the generators,
+#  but new projects use the control-plane suffix so they cannot be confused with
+#  service repos named <project>-<service>-management.)
+#
+# Usage: scripts/new-project.sh <project> [target-dir] [--allow-custom-name]
+#        scripts/new-project.sh --print-name <project>
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT="${1:-}"
-TARGET="${2:-}"
-[ -n "$PROJECT" ] || { echo "Usage: $0 <project> [target-dir]" >&2; exit 1; }
-TARGET="${TARGET:-./${PROJECT}-management}"
+
+ALLOW_CUSTOM=0
+PRINT_NAME=0
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --allow-custom-name) ALLOW_CUSTOM=1 ;;
+    --print-name) PRINT_NAME=1 ;;
+    *) ARGS+=("$a") ;;
+  esac
+done
+PROJECT="${ARGS[0]:-}"
+TARGET="${ARGS[1]:-}"
+
+[ -n "$PROJECT" ] || { echo "Usage: $0 <project> [target-dir] [--allow-custom-name]" >&2; exit 1; }
+printf '%s' "$PROJECT" | grep -qE '^[a-z][a-z0-9-]*$' || { echo "ERROR: project must be kebab-case: '$PROJECT'" >&2; exit 1; }
+
+REPO_NAME="${PROJECT}-control-plane"
+if [ "$PRINT_NAME" = 1 ]; then
+  printf '%s\n' "$REPO_NAME"
+  exit 0
+fi
+
+TARGET="${TARGET:-./$REPO_NAME}"
+TARGET_BASE="$(basename "$TARGET")"
+if [ "$TARGET_BASE" != "$REPO_NAME" ] && [ "$ALLOW_CUSTOM" = 0 ]; then
+  echo "ERROR: target dir '$TARGET_BASE' does not follow the naming rule for the project control repo (expected '$REPO_NAME')." >&2
+  echo "       Pass --allow-custom-name to override." >&2
+  exit 1
+fi
 [ -e "$TARGET" ] && { echo "ERROR: target exists: $TARGET" >&2; exit 1; }
 
 mkdir -p "$TARGET"
@@ -36,6 +69,6 @@ cat > "$TARGET/knowledge/pack.json" <<EOF
 {"apiVersion":"sdlc/v1","kind":"CognitionPack","metadata":{"name":"${PROJECT}-cognition","version":"0.1.0"},"items":[]}
 EOF
 
-( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${PROJECT} management repo" ) || true
-echo "Created management repo: $TARGET"
+( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${PROJECT} control-plane repo" ) || true
+echo "Created control-plane repo: $TARGET"
 echo "Next: scripts/new-service-repo.sh <type> <name> $TARGET"

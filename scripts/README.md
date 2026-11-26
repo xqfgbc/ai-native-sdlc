@@ -6,7 +6,8 @@
 
 | 命令 | 用途 |
 |---|---|
-| `new-project.sh <project> [target]` | 生成项目管理仓（loop/execution/knowledge/wiki/sync + 自包含脚本） |
+| `new-project.sh <project> [target] [--allow-custom-name]` | 生成控制平面仓（`<project>-control-plane`：loop/execution/knowledge/wiki/sync + 自包含脚本） |
+| `new-project.sh --print-name <project>` | 只打印推导出的控制平面仓名（无副作用） |
 | `new-service-repo.sh <type> <name> <mgmt> [target] [--allow-custom-name]` | 生成服务仓并登记到管理仓；目录名按命名规则推导（见下） |
 | `new-service-repo.sh --print-name <type> <name> <mgmt>` | 只打印按规则推导的仓库名（无副作用） |
 

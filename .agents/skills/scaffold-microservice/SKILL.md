@@ -14,8 +14,10 @@ description: 生成一个新的 Spring Cloud 微服务仓（k8s 原生发现 / C
 2. 在**框架仓**运行：
 
    ```bash
-   scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
+   scripts/new-service-repo.sh <type> <name> <control-plane-repo> [target-dir] [--allow-custom-name]
    ```
+
+   `<control-plane-repo>` 是控制平面仓（`<project>-control-plane`；旧项目可能仍叫 `<project>-management`）。
 
    `type` ∈ `business | gateway | config-server | configuration-data | frontend-vue | infra`。
    **目录名由命名规则推导**（`<project>` = 管理仓名去掉 `-management`）：

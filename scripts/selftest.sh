@@ -11,28 +11,34 @@ ok() { echo "PASS: $1"; pass=$((pass+1)); }
 bad() { echo "FAIL: $1"; fail=$((fail+1)); }
 
 # 1. scaffold
-"$ROOT/scripts/new-project.sh" demo "$WORK/demo-management" >/dev/null
-[ -f "$WORK/demo-management/loop/04-build/services.json" ] && ok "new-project creates management repo" || bad "new-project"
-[ -f "$WORK/demo-management/scripts/analyze-reports.sh" ] && ok "management repo is self-contained" || bad "self-contained"
-( cd "$WORK/demo-management" && bash scripts/validate-project.sh . >/dev/null ) && ok "fresh management repo validates (empty registry, no reports)" || bad "validate empty project"
+"$ROOT/scripts/new-project.sh" demo "$WORK/demo-control-plane" >/dev/null
+[ -f "$WORK/demo-control-plane/loop/04-build/services.json" ] && ok "new-project creates control-plane repo" || bad "new-project"
+[ -f "$WORK/demo-control-plane/scripts/analyze-reports.sh" ] && ok "control-plane repo is self-contained" || bad "self-contained"
+( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "fresh control-plane repo validates (empty registry, no reports)" || bad "validate empty project"
+[ "$("$ROOT/scripts/new-project.sh" --print-name demo)" = "demo-control-plane" ] && ok "naming: project control repo -> <project>-control-plane" || bad "naming control-plane"
+if "$ROOT/scripts/new-project.sh" demo "$WORK/wrong-control-name" >/dev/null 2>&1; then
+  bad "control-plane naming gate rejects non-conforming target"
+else
+  ok "control-plane naming gate rejects non-conforming target"
+fi
 
 # 1b. repo naming rules (--print-name derives the repo dir without side effects)
-name_of() { "$ROOT/scripts/new-service-repo.sh" --print-name "$1" "$2" "$WORK/demo-management" 2>/dev/null; }
+name_of() { "$ROOT/scripts/new-service-repo.sh" --print-name "$1" "$2" "$WORK/demo-control-plane" 2>/dev/null; }
 [ "$(name_of business speaker)" = "demo-speaker-management" ] && ok "naming: business -> <project>-<service>-management" || bad "naming business"
 [ "$(name_of gateway api)" = "demo-api-gateway" ] && ok "naming: gateway -> <project>-<usage>-gateway" || bad "naming gateway"
 [ "$(name_of infra aws)" = "demo-aws-infra" ] && ok "naming: infra -> <project>-<cloud>-infra" || bad "naming infra"
 [ "$(name_of config-server config-server)" = "demo-config-server" ] && ok "naming: config-server -> <project>-config-server" || bad "naming config-server"
 [ "$(name_of configuration-data prod)" = "demo-prod-configuration-data" ] && ok "naming: configuration-data prod" || bad "naming prod config"
 [ "$(name_of configuration-data devops)" = "demo-devops-configuration-data" ] && ok "naming: configuration-data devops" || bad "naming devops config"
-if "$ROOT/scripts/new-service-repo.sh" business speaker "$WORK/demo-management" "$WORK/wrong-repo-name" >/dev/null 2>&1; then
+if "$ROOT/scripts/new-service-repo.sh" business speaker "$WORK/demo-control-plane" "$WORK/wrong-repo-name" >/dev/null 2>&1; then
   bad "naming gate rejects non-conforming target"
 else
   ok "naming gate rejects non-conforming target"
 fi
 
-"$ROOT/scripts/new-service-repo.sh" business order-service "$WORK/demo-management" "$WORK/demo-order-service-management" >/dev/null
-"$ROOT/scripts/new-service-repo.sh" frontend-vue web-portal "$WORK/demo-management" "$WORK/demo-web-portal-management" >/dev/null
-"$ROOT/scripts/new-service-repo.sh" configuration-data devops "$WORK/demo-management" "$WORK/demo-devops-configuration-data" >/dev/null
+"$ROOT/scripts/new-service-repo.sh" business order-service "$WORK/demo-control-plane" "$WORK/demo-order-service-management" >/dev/null
+"$ROOT/scripts/new-service-repo.sh" frontend-vue web-portal "$WORK/demo-control-plane" "$WORK/demo-web-portal-management" >/dev/null
+"$ROOT/scripts/new-service-repo.sh" configuration-data devops "$WORK/demo-control-plane" "$WORK/demo-devops-configuration-data" >/dev/null
 [ -f "$WORK/demo-devops-configuration-data/service.json" ] && ok "configuration-data template generates a repo" || bad "configuration-data template"
 [ "$(jq -r .type "$WORK/demo-devops-configuration-data/service.json")" = "configuration-data" ] && ok "configuration-data service.json type" || bad "configuration-data type"
 [ -f "$WORK/demo-order-service-management/.sdlc/config.json" ] && ok "new-service-repo creates service repo" || bad "new-service-repo"
@@ -44,17 +50,17 @@ fi
 [ -f "$WORK/demo-order-service-management/scripts/autopilot-gate.sh" ] && ok "trust ladder autopilot gate" || bad "autopilot-gate"
 [ -f "$WORK/demo-order-service-management/scripts/scan-findings.sh" ] && ok "scanner findings tooling" || bad "scan-findings"
 [ -f "$WORK/demo-order-service-management/findings/inbox.md" ] && ok "findings inbox seeded" || bad "findings inbox"
-[ -f "$WORK/demo-management/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
-( cd "$WORK/demo-management" && bash scripts/intake.sh >/dev/null ) && \
-  [ -n "$(ls "$WORK/demo-management/intake/candidates/"*.md 2>/dev/null || true)" ] && \
+[ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
+( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
+  [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \
   ok "intake clusters signals into candidates" || bad "intake candidate"
-( cd "$WORK/demo-management" && bash scripts/intake-signal.sh onboarding "Slack: signup slow" "body" >/dev/null )
-sig="$(ls "$WORK/demo-management/intake/signals/"*.md 2>/dev/null | grep -v 'README.md' | grep -v 'example-signal' | head -1 || true)"
+( cd "$WORK/demo-control-plane" && bash scripts/intake-signal.sh onboarding "Slack: signup slow" "body" >/dev/null )
+sig="$(ls "$WORK/demo-control-plane/intake/signals/"*.md 2>/dev/null | grep -v 'README.md' | grep -v 'example-signal' | head -1 || true)"
 [ -n "$sig" ] && ok "intake-signal writes a channel signal" || bad "intake-signal"
 [ -f "$WORK/demo-web-portal-management/package.json" ] && ok "frontend-vue template has build content" || bad "frontend-vue build"
 
 # 2. registry
-[ "$(jq '.services|length' "$WORK/demo-management/loop/04-build/services.json")" = "3" ] && ok "registry has 3 services" || bad "registry"
+[ "$(jq '.services|length' "$WORK/demo-control-plane/loop/04-build/services.json")" = "3" ] && ok "registry has 3 services" || bad "registry"
 
 # 3. commit + collect twice (hash chain + candidates + session-log)
 ( cd "$WORK/demo-order-service-management" && mkdir -p sdlc/session-log \
@@ -64,7 +70,7 @@ sig="$(ls "$WORK/demo-management/intake/signals/"*.md 2>/dev/null | grep -v 'REA
   && bash .sdlc/collect.sh >/dev/null )
 ( cd "$WORK/demo-order-service-management" && echo "more" >> README.md && git add -A \
   && git commit -q -m "fix: null status [learn] prefer @ServiceConnection" && bash .sdlc/collect.sh >/dev/null )
-REPORTS=( "$WORK/demo-management/execution/build/order-service/reports/"*.json )
+REPORTS=( "$WORK/demo-control-plane/execution/build/order-service/reports/"*.json )
 [ "${#REPORTS[@]}" -eq 2 ] && ok "two reports uploaded (idempotent)" || bad "reports count"
 chain_ok=0
 for f in "${REPORTS[@]}"; do [ -n "$(jq -r '.metadata.prevHash' "$f")" ] && chain_ok=1; done
@@ -78,33 +84,33 @@ done
 [ "$session_ok" -eq 1 ] && ok "session-log derived candidate (D1)" || bad "session-log candidate"
 
 # 4. analyze + validate
-( cd "$WORK/demo-management" && bash scripts/analyze-reports.sh . >/dev/null )
-[ -f "$WORK/demo-management/wiki/index.md" ] && ok "analyzer generates wiki" || bad "wiki"
-prop="$(cd "$WORK/demo-management" && ls knowledge/proposals/*.json 2>/dev/null | head -1 | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' || true)"
+( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )
+[ -f "$WORK/demo-control-plane/wiki/index.md" ] && ok "analyzer generates wiki" || bad "wiki"
+prop="$(cd "$WORK/demo-control-plane" && ls knowledge/proposals/*.json 2>/dev/null | head -1 | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' || true)"
 [ -n "$prop" ] && ok "analyzer creates proposal (proposed, not active)" || bad "proposal"
 rep_ok=0
-for p in "$WORK/demo-management/knowledge/proposals/"*.json; do
+for p in "$WORK/demo-control-plane/knowledge/proposals/"*.json; do
   [ -f "$p" ] || continue
   [ "$(jq -r '.repeat // false' "$p")" = "true" ] && rep_ok=1
 done
 [ "$rep_ok" -eq 1 ] && ok "distillation repeat detection (D4)" || bad "D4 repeat detection"
-( cd "$WORK/demo-management" && bash scripts/validate-project.sh . >/dev/null ) && ok "validate-project passes" || bad "validate-project"
-[ -f "$WORK/demo-management/loop/05-test/results.md" ] && ok "test management results (E1)" || bad "test results (E1)"
-[ -f "$WORK/demo-management/wiki/dora.md" ] && ok "DORA metrics (E2)" || bad "dora (E2)"
+( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "validate-project passes" || bad "validate-project"
+[ -f "$WORK/demo-control-plane/loop/05-test/results.md" ] && ok "test management results (E1)" || bad "test results (E1)"
+[ -f "$WORK/demo-control-plane/wiki/dora.md" ] && ok "DORA metrics (E2)" || bad "dora (E2)"
 # Simulate a deploy report to exercise DORA lead-time computation.
-DEP_DIR="$WORK/demo-management/execution/deploy/order-service/reports"
+DEP_DIR="$WORK/demo-control-plane/execution/deploy/order-service/reports"
 mkdir -p "$DEP_DIR"
-cp "$(ls "$WORK/demo-management/execution/build/order-service/reports/"*.json | head -1)" "$DEP_DIR/deploy.json"
-( cd "$WORK/demo-management" && bash scripts/analyze-reports.sh . >/dev/null )
-grep -qE 'Lead time for changes \| [0-9]' "$WORK/demo-management/wiki/dora.md" && ok "DORA lead time computed (P2)" || bad "dora lead time"
+cp "$(ls "$WORK/demo-control-plane/execution/build/order-service/reports/"*.json | head -1)" "$DEP_DIR/deploy.json"
+( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )
+grep -qE 'Lead time for changes \| [0-9]' "$WORK/demo-control-plane/wiki/dora.md" && ok "DORA lead time computed (P2)" || bad "dora lead time"
 
 # 5. cognition closed loop (D2/D3)
 if [ -n "$prop" ]; then
-  ( cd "$WORK/demo-management" && bash scripts/promote-proposal.sh . "$prop" tester@example.com deterministic >/dev/null )
-  ver="$(jq -r '.metadata.version' "$WORK/demo-management/knowledge/pack.json")"
+  ( cd "$WORK/demo-control-plane" && bash scripts/promote-proposal.sh . "$prop" tester@example.com deterministic >/dev/null )
+  ver="$(jq -r '.metadata.version' "$WORK/demo-control-plane/knowledge/pack.json")"
   [ "$ver" != "0.1.0" ] && ok "promote-proposal bumps pack version ($ver)" || bad "pack version bump"
-  [ -f "$WORK/demo-management/knowledge/guardrails/$prop.md" ] && ok "deterministic guardrail stub" || bad "guardrail stub"
-  ( cd "$WORK/demo-management" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
+  [ -f "$WORK/demo-control-plane/knowledge/guardrails/$prop.md" ] && ok "deterministic guardrail stub" || bad "guardrail stub"
+  ( cd "$WORK/demo-control-plane" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
   [ -f "$WORK/demo-order-service-management/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
 else
   bad "no proposal to promote"

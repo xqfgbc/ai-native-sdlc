@@ -2,7 +2,8 @@
 # scripts/new-service-repo.sh — generate a service repo from a service-type template,
 # wire its collector, and register it in the management repo's services.json.
 #
-# Repo naming rules (derived from <project>, the management repo name minus "-management"):
+# Repo naming rules (derived from <project> = control repo name minus "-control-plane",
+# or minus the legacy "-management" suffix):
 #   business, frontend-vue   <project>-<service>-management        e.g. ses-speaker-management
 #   gateway                  <project>-<usage>-gateway             e.g. ses-api-gateway
 #   infra                    <project>-<cloud>-infra               e.g. ses-aws-infra
@@ -32,7 +33,7 @@ usage() {
 Usage: new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allow-custom-name]
        new-service-repo.sh --print-name <type> <name> <management-repo>
 
-Types and repo naming rules (<project> = management repo name minus "-management"):
+Types and repo naming rules (<project> = control repo name minus "-control-plane"):
   business, frontend-vue  <project>-<service>-management     (<name> = service)
   gateway                 <project>-<usage>-gateway          (<name> = usage)
   infra                   <project>-<cloud>-infra            (<name> = cloud provider)
@@ -77,10 +78,17 @@ service_name() { # <type> <name> <project> — the logical service name used in 
 [ -d "$MGMT" ] || { echo "ERROR: management repo not found: $MGMT" >&2; exit 1; }
 
 MGMT_ABS="$(cd "$MGMT" && pwd)"
-PROJECT="$(basename "$MGMT_ABS")"; PROJECT="${PROJECT%-management}"
+PROJECT="$(basename "$MGMT_ABS")"
+case "$PROJECT" in
+  *-control-plane) PROJECT="${PROJECT%-control-plane}" ;;
+  *-management)    PROJECT="${PROJECT%-management}" ;;  # legacy control-plane names
+esac
 
 SERVICE_NAME="$(service_name "$TYPE" "$NAME" "$PROJECT")"
 REPO_NAME="$(repo_name "$TYPE" "$NAME" "$PROJECT")"
+
+[ "$SERVICE_NAME" = "control-plane" ] && {
+  echo "ERROR: 'control-plane' is reserved for the project control repo; choose another service name" >&2; exit 1; }
 
 case "$TYPE" in
   config-server)
