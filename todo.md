@@ -107,7 +107,25 @@
 3. `upload-report.sh` 硬编码控制平面默认分支为 `main`（`gh repo clone --branch main`、`--base main`），
    而本项目控制平面默认是 `master` → 配好 token 后远端 PR 仍会失败。
 
+### 4.0.1 门禁验证结论（2026-11-26 speaker 实验，原型 `ses-speaker-management/scripts/gate.sh`）
+
+| sun-life 能力 | 本次验证 | 结论 |
+|---|---|---|
+| `--start` 基线 | `gate.sh start` 记录 HEAD/基线检查 | ✅ 可用 |
+| 工作项改动清单 | `gate.sh scope`（暂存越界文件被拒） | ✅ 可用，未接 hook |
+| `--red` 红测 | `gate.sh red` 接受断言失败、拒绝编译错误 | ✅ 可用 |
+| final 报告 + digest | `gate.sh final` / `verify`（代码变更后 digest 失配） | ✅ 可用 |
+| pre-commit 秘密拦截 | 暂存假 AKIA → 提交被拦 | ✅ 已验证 |
+| commit-msg 格式 | `bad message` 被拦 | ✅ 已验证 |
+| release 分支必须 PR | **发现缺陷**：只看 HEAD，推别的 release 分支可绕过 | ❌→✅ 已修：读取推送 refs，selftest 增回归用例 |
+| lint 基线 diff / 报告↔collect 哈希绑定 / 审查 PASS 绑定 | 未实现 | ❌ 仍缺 |
+
+结论：sun-life 的"基线→范围→红测→final+digest"模型可在本框架落地；缺的是与 collect/review 的绑定和
+把原型接进 hook。原型状态目录 `.sdlc/gate/`（gitignored），不参与提交。
+
 ### [ ] TODO-01（P1）变更范围白名单（scope guard）
+
+- 进展（2026-11-26）：`gate.sh scope` 原型已验证（越界文件被拒），待产品化进 `pre-commit`/`pre-push`。
 
 - 现状：`pre-commit` 只看内容违规，不看"这次允许改哪些文件"。
 - 建议最小实现：每次变更在 `.sdlc/change/<id>.json`（或 commit trailer `Scope: a,b,c`）声明允许改动的路径 + 验证命令；`pre-commit` 校验 staged 文件 ⊆（声明路径 ∪ 测试 ∪ 文档）；`pre-push` 复用同一清单。
@@ -120,6 +138,9 @@
 
 ### [ ] TODO-02（P1）验证报告与哈希绑定（verify report）
 
+- 进展（2026-11-26）：`gate.sh final` 已产出 `final.json`（检查结果 + 变更内容 digest），`verify` 能发现 final 后改动；
+  待并进 `pre-push` 与 `collect.sh` 的 report。
+
 - 现状：`pre-push` 跑完验证只打印结果，不落盘、不可审计。
 - 建议：`pre-push` 成功后在 `.sdlc/verify/<HEAD>.json` 记录：`commitSha`、命令、退出码、耗时、环境（JDK/Gradle 版本）、输出摘要哈希；`collect.sh` 把它带进 execution report 的 facts（新增字段需同步 schema）。
 - 验收：
@@ -129,6 +150,8 @@
 - 备注：这是 sun-life `report.json` 的最小对等物；先服务仓，再控制平面/框架。
 
 ### [ ] TODO-03（P2）测试先行门禁（red-first）
+
+- 进展（2026-11-26）：`gate.sh red` 已验证"断言失败=红、编译错误不算红"；待接进修复流程。
 
 - 现状：修 bug 时 `test-freeze` 只阻止改测试，不能证明测试先红。
 - 建议：为服务仓提供 `scripts/red-check.sh`：指定测试类/方法，先跑必须失败（且失败原因是断言），再用 `git` 校验本轮仅改测试文件；接入 `CLAUDE_FIX_TASK=1` 流程与 skill。
@@ -256,6 +279,8 @@ git checkout main && git push gate-test main                 # 应被拦
 - 2026-11-26：新增 `commit-msg`、`pre-push` 验证；`no-secrets` 修复（内容检测与 stdin 挂起）；业务模板 `ArchitectureTest` 修复 checkstyle；selftest 59 项。
 - 2026-11-26：本文件建立，记录 sun-life 门禁模型与 9 项改进方向。
 - 2026-11-26：push 规则调整——只有 `release*` 必须走 PR，其余分支（含 main/master）可直推但必须先通过本仓验证；selftest 增 2 条分支策略用例（61 项）。
+- 2026-11-26：speaker 实施（JPA + Flyway + Podman PG + W3C tracing）中验证 sun-life 门禁模型：基线/范围/红测/final+digest
+  可用，发现并修复 pre-push 只看 HEAD 的绕过缺陷（selftest 62 项）；结论见 §4.0.1。
 - 2026-11-26：记录“只 clone 服务仓（无 control-plane）”的降级行为（§4.0），新增 TODO-10～13：
   managementRepo 解析与显式失败、采集位/上传位分离 + 本地补传、upload-report 基线分支、README 独立开发小节；
   并按现状更新 TODO-09（SES 仓已有远端、仍无验证 CI）。
