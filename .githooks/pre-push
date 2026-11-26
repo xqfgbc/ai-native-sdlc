@@ -1,17 +1,31 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # .githooks/pre-push — two deterministic gates before anything leaves the repo:
 #   1. release* branches take a pull request; every other branch (main/master
 #      included) may be pushed directly — but the push still has to pass the
 #      repo's own verification (verify-before-push, like sun-life's final check).
 #      Skip verification only deliberately: SDL_SKIP_VERIFY=1 and say why.
+# The branch check reads the refs git is about to push (stdin), not just HEAD:
+# otherwise pushing release/* from another checked-out branch slips through.
 set -e
-branch="$(git rev-parse --abbrev-ref HEAD)"
-case "$branch" in
-  release*)
-    echo "Direct push to release branch '$branch' is blocked. Open a pull request." >&2
-    exit 1
-    ;;
-esac
+blocked=0
+branch=""
+while IFS=' ' read -r -t 1 local_ref local_sha remote_ref remote_sha; do
+  [ -n "${remote_ref:-}" ] || continue
+  case "$remote_ref" in
+    refs/heads/release*)
+      blocked=1
+      branch="${remote_ref#refs/heads/}"
+      ;;
+  esac
+done || true
+if [ "$blocked" -eq 0 ]; then
+  branch="$(git rev-parse --abbrev-ref HEAD)"
+  case "$branch" in release*) blocked=1 ;; esac
+fi
+if [ "$blocked" -eq 1 ]; then
+  echo "Direct push to release branch '$branch' is blocked. Open a pull request." >&2
+  exit 1
+fi
 
 root="$(git rev-parse --show-toplevel)"
 

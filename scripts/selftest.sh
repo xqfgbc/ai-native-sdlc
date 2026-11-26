@@ -95,13 +95,20 @@ mkdir -p "$WORK/gate-repo/.githooks"
 cp "$ROOT/.githooks/pre-push" "$WORK/gate-repo/.githooks/pre-push"
 ( cd "$WORK/gate-repo" && git init -q && git checkout -q -b main \
   && git -c user.name=gate -c user.email=gate@example.com commit -q --allow-empty -m "chore: init" )
-( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 sh .githooks/pre-push >/dev/null 2>&1 ) \
+( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 bash .githooks/pre-push >/dev/null 2>&1 ) \
   && ok "pre-push allows a direct push to main" || bad "pre-push direct push to main"
 ( cd "$WORK/gate-repo" && git checkout -q -b release/1.0 )
-if ( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 sh .githooks/pre-push >/dev/null 2>&1 ); then
+if ( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 bash .githooks/pre-push >/dev/null 2>&1 ); then
   bad "pre-push requires a PR for release branches"
 else
   ok "pre-push requires a PR for release branches"
+fi
+git -C "$WORK/gate-repo" checkout -q main
+if ( cd "$WORK/gate-repo" && printf 'refs/heads/release/9.9 %s refs/heads/release/9.9 %s\n' \
+    "$(git rev-parse main)" "" | SDL_SKIP_VERIFY=1 bash .githooks/pre-push ) >/dev/null 2>&1; then
+  bad "pre-push blocks a release ref pushed from another branch"
+else
+  ok "pre-push blocks a release ref pushed from another branch"
 fi
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
