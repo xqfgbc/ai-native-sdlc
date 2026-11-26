@@ -90,6 +90,19 @@ fi
 printf 'feat(speaker): add endpoint\n' > "$WORK/msg-good.txt"
 ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WORK/msg-good.txt" >/dev/null 2>&1 ) \
   && ok "commit-msg accepts a typed message" || bad "commit-msg accepts a typed message"
+# Branch policy: release* requires a PR; every other branch may be pushed directly.
+mkdir -p "$WORK/gate-repo/.githooks"
+cp "$ROOT/.githooks/pre-push" "$WORK/gate-repo/.githooks/pre-push"
+( cd "$WORK/gate-repo" && git init -q && git checkout -q -b main \
+  && git -c user.name=gate -c user.email=gate@example.com commit -q --allow-empty -m "chore: init" )
+( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 sh .githooks/pre-push >/dev/null 2>&1 ) \
+  && ok "pre-push allows a direct push to main" || bad "pre-push direct push to main"
+( cd "$WORK/gate-repo" && git checkout -q -b release/1.0 )
+if ( cd "$WORK/gate-repo" && SDL_SKIP_VERIFY=1 sh .githooks/pre-push >/dev/null 2>&1 ); then
+  bad "pre-push requires a PR for release branches"
+else
+  ok "pre-push requires a PR for release branches"
+fi
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \

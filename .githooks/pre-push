@@ -1,13 +1,14 @@
 #!/bin/sh
 # .githooks/pre-push — two deterministic gates before anything leaves the repo:
-#   1. protected branches (main/master/prod/uat) take a PR, not a direct push;
-#   2. the repo's own verification must pass (verify-before-push, like sun-life's
-#      final check). Skip only deliberately: SDL_SKIP_VERIFY=1 and say why.
+#   1. release* branches take a pull request; every other branch (main/master
+#      included) may be pushed directly — but the push still has to pass the
+#      repo's own verification (verify-before-push, like sun-life's final check).
+#      Skip verification only deliberately: SDL_SKIP_VERIFY=1 and say why.
 set -e
 branch="$(git rev-parse --abbrev-ref HEAD)"
 case "$branch" in
-  main|master|prod|uat)
-    echo "Direct push to '$branch' is blocked. Open a pull request instead." >&2
+  release*)
+    echo "Direct push to release branch '$branch' is blocked. Open a pull request." >&2
     exit 1
     ;;
 esac

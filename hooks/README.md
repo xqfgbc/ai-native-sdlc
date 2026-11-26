@@ -27,7 +27,7 @@ SessionStart hook 自动执行，其他 agent 见 `AGENTS.md` 会话协议第 0 
 
 - `pre-commit` → `no-secrets` + `protect-paths` + `spring-guard`（全量 staged 检查）。
 - `commit-msg` → 强制 `AGENTS.md` §6 的提交信息格式（`type(scope): subject`），保证提交可追溯到阶段/产物。
-- `pre-push` → 拦截 `main/master/prod/uat` 直推，并在推送前跑本仓验证：
+- `pre-push` → 只有 `release*` 分支必须走 PR；其他分支（含 `main/master`）可直推，但推送前必须跑本仓验证：
   服务仓 `app-verify build+test+lint`、控制平面仓 `validate-project`、框架仓 `selftest`；
   只有 `SDL_SKIP_VERIFY=1` 才能显式跳过（并在 PR 里说明理由）。
 

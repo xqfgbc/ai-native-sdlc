@@ -26,7 +26,7 @@
 ```bash
 # 0) clone 后先启用确定性护栏（幂等）；Claude Code 会在会话开始时自动执行
 bash scripts/install-hooks.sh
-#    框架自检：应 59 项全绿
+#    框架自检：应 61 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -86,7 +86,7 @@ bash scripts/analyze-reports.sh .
 每个服务仓生成时自带：`app-verify.sh`（统一验证 CLI）、`feature-map.md`（功能→验证状态）、
 `collect.yml`（push 采集）、`.sdlc/`、`.agents/skills`、`findings/`（scanner 队列）、`Makefile`，
 以及 `hooks/` + `.githooks/`（已设置 `core.hooksPath=.githooks`：pre-commit 查 secret/路径/Boot4，
-commit-msg 校验提交信息，pre-push 拦受保护分支并先跑本仓验证）。
+commit-msg 校验提交信息，pre-push 要求 `release*` 走 PR、其余分支推送前先跑本仓验证）。
 控制平面仓（`new-project.sh`）同样带上并启用这些 hooks。
 
 ### 4.1 仓库命名规则（生成器强制）
@@ -159,7 +159,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（59 项）。
+- 框架自检：`bash scripts/selftest.sh`（61 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -218,4 +218,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 59 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 61 passed, 0 failed`。

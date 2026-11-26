@@ -15,7 +15,7 @@
 | agent 编辑文件前 | PreToolUse | `hooks/{no-secrets,protect-paths,spring-guard,test-freeze,production-gate}.sh` | 写入 secret、受保护路径、Boot4/JPA 违规、测试冻结期改测试、无授权部署 | 不能绕过（agent 侧） |
 | git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
 | git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
-| git push | `pre-push` | `.githooks/pre-push` | 直推 `main/master/prod/uat`；未通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由） |
+| git push | `pre-push` | `.githooks/pre-push` | `release*` 直推需走 PR；其余分支（含 main/master）可直推，但必须先通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由；分支规则不可跳过） |
 | CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（59 项）、技能/agent 配置评测 | 无（远端权威） |
 
 `pre-push` 的"本仓验证"按仓类型分派：
@@ -187,3 +187,4 @@ git checkout main && git push gate-test main                 # 应被拦
 
 - 2026-11-26：新增 `commit-msg`、`pre-push` 验证；`no-secrets` 修复（内容检测与 stdin 挂起）；业务模板 `ArchitectureTest` 修复 checkstyle；selftest 59 项。
 - 2026-11-26：本文件建立，记录 sun-life 门禁模型与 9 项改进方向。
+- 2026-11-26：push 规则调整——只有 `release*` 必须走 PR，其余分支（含 main/master）可直推但必须先通过本仓验证；selftest 增 2 条分支策略用例（61 项）。
