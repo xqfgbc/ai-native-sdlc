@@ -5,3 +5,4 @@ sync/reports/
 # Gradle
 build/
 .gradle/
+.DS_Store
