@@ -1,0 +1,45 @@
+name: Intake clustering
+
+# Outer intelligence loop: cluster raw signals (Slack/Linear/email/alerts) into candidate intents.
+# Humans promote a candidate to loop/01-intent/ when it is worth a real change.
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [intake-signal]
+
+permissions:
+  contents: write
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ingest a dispatched signal
+        if: github.event_name == 'repository_dispatch'
+        env:
+          PAYLOAD: ${{ toJson(github.event.client_payload) }}
+        run: |
+          printf '%s' "$PAYLOAD" > /tmp/payload.json
+          TAG="$(jq -r '.tag // "uncategorized"' /tmp/payload.json)"
+          TITLE="$(jq -r '.title // "untitled"' /tmp/payload.json)"
+          BODY="$(jq -r '.body // ""' /tmp/payload.json)"
+          bash scripts/intake-signal.sh "$TAG" "$TITLE" "$BODY"
+
+      - name: Cluster signals into candidates
+        run: bash scripts/intake.sh
+
+      - name: Commit candidates
+        run: |
+          git config user.name "sdlc-intake"
+          git config user.email "sdlc-intake@users.noreply.github.com"
+          git add intake
+          if git diff --cached --quiet; then
+            echo "no new candidates"
+          else
+            git commit -m "chore(intake): cluster signals"
+            git push
+          fi

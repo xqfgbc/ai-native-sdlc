@@ -1,0 +1,27 @@
+name: Framework self-test
+
+# End-to-end self-test of the framework: generates a demo project + services in a temp dir,
+# runs collect -> analyze -> validate, and asserts the artifacts. Runs on every push/PR.
+on:
+  push:
+  pull_request:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+      - name: Shell syntax check
+        run: |
+          for f in scripts/*.sh; do bash -n "$f"; done
+          echo "syntax ok"
+
+      - name: Validate agent configuration
+        run: ./scripts/validate-skills.sh
+
+      - name: End-to-end self-test
+        run: bash scripts/selftest.sh

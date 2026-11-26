@@ -1,0 +1,13 @@
+# 人类门禁 owner（D16）：agent 不批准自己，门禁由人/团队强制。
+# 按项目实际替换团队名。
+
+# 项目宪法
+/loop/00-constitution.md        @architect
+# 需求与设计
+/loop/02-spec/                  @architect @product-owner
+# 计划与服务拆分
+/loop/03-plan/                  @tech-lead
+# 上线
+/loop/06-deploy/                @release-manager
+# 认知包（项目级约束/技能的 active 变更，D19）
+/knowledge/pack.json            @policy-owner

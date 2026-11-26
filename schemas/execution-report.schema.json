@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-native-sdlc/schemas/execution-report.schema.json",
+  "title": "ExecutionReport",
+  "description": "Incremental report produced by a service repo's collector at commit time and uploaded to the project-management repo.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "sdlc/v1" },
+    "kind": { "const": "ExecutionReport" },
+    "metadata": {
+      "type": "object",
+      "required": ["service", "repo", "type", "trigger", "toSha"],
+      "properties": {
+        "service": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "repo": { "type": "string" },
+        "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue"] },
+        "agent": { "type": "string" },
+        "trigger": { "enum": ["commit", "schedule", "manual"] },
+        "fromSha": { "type": "string" },
+        "toSha": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["stage", "facts"],
+      "properties": {
+        "stage": { "enum": ["intent", "spec", "plan", "build", "test", "deploy", "maintain"] },
+        "requirementRefs": { "type": "array", "items": { "type": "string" } },
+        "facts": {
+          "type": "object",
+          "properties": {
+            "commits": { "type": "array", "items": { "type": "string" } },
+            "filesChanged": { "type": "array", "items": { "type": "string" } },
+            "layers": { "type": "array", "items": { "type": "string" } },
+            "tests": {
+              "type": "object",
+              "properties": {
+                "unit": { "type": "object" },
+                "integration": { "type": "object" },
+                "coverage": { "type": "number" },
+                "failed": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "architectureSignals": { "type": "object" }
+          }
+        },
+        "interactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "summary"],
+            "properties": {
+              "type": { "enum": ["prompt", "correction", "decision", "question"] },
+              "summary": { "type": "string" },
+              "evidenceRef": { "type": "string" }
+            }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "status": { "enum": ["proposed", "accepted", "rejected", "superseded"] },
+              "rationale": { "type": "string" },
+              "adrRef": { "type": "string" }
+            }
+          }
+        },
+        "ruleViolations": { "type": "array", "items": { "type": "string" } },
+        "candidateKnowledge": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "title", "proposal"],
+            "properties": {
+              "type": { "enum": ["constraint", "skill", "lesson", "context"] },
+              "title": { "type": "string" },
+              "proposal": { "type": "string" },
+              "evidenceRefs": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "review": {
+          "type": "object",
+          "properties": {
+            "status": { "enum": ["auto", "needs_review", "approved", "rejected"] },
+            "reviewer": { "type": "string" },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

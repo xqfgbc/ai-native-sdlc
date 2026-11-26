@@ -1,0 +1,6 @@
+{
+  "apiVersion": "sdlc/v1",
+  "kind": "ServiceRegistry",
+  "project": "{{PROJECT}}",
+  "services": []
+}

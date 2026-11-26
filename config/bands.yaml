@@ -1,0 +1,49 @@
+# Control bands for closing the loop (Stage 6: Maintain).
+#
+# Detection is deterministic: a version-controlled script computes the
+# baseline (mean + stddev over a rolling window, Western Electric rules so
+# bands catch slow drift as well as spikes) and invokes Claude per tier.
+# No model is involved in detection.
+#
+# Tiers:
+#   1sigma -> log only
+#   2sigma -> invoke Claude read-only to diagnose
+#   3sigma -> Claude may act only by opening a PR into the review gate or
+#             triggering a pre-approved runbook
+
+metrics:
+  - metric: post_deploy_5xx_rate
+    baseline: rolling_30d
+    rules: western_electric
+    tiers:
+      1sigma: { action: log }
+      2sigma:
+        action: diagnose
+        tools: ["Read", "Grep", "Bash(gh run view *)"]
+      3sigma:
+        action: propose
+        routes: ["pull_request", "runbook:rollback-deploy"]
+
+  - metric: ci_test_failure_rate
+    baseline: rolling_30d
+    rules: western_electric
+    tiers:
+      1sigma: { action: log }
+      2sigma:
+        action: diagnose
+        tools: ["Read", "Grep", "Bash(gh run view *)"]
+      3sigma:
+        action: propose
+        routes: ["pull_request"]
+
+  - metric: pr_cycle_time
+    baseline: rolling_30d
+    rules: western_electric
+    tiers:
+      1sigma: { action: log }
+      2sigma:
+        action: diagnose
+        tools: ["Read", "Grep"]
+      3sigma:
+        action: report
+        routes: ["engineering-leadership-report"]

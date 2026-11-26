@@ -1,0 +1,13 @@
+# prod overlay — advances only by a merged, release-manager-approved tag bump.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - ../../apps/gateway
+namespace: prod
+images:
+  - name: gateway
+    newTag: v1.0.0 # {"$imagepolicy": "flux-system:gateway-prod"}
+replicas:
+  - name: gateway
+    count: 3

@@ -1,0 +1,7 @@
+# collector-local artifacts (authoritative copies live in the management repo)
+sync/reports/
+*.tmp
+
+# Gradle
+build/
+.gradle/

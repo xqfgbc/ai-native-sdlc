@@ -1,0 +1,43 @@
+# adapters/deepseek-harness/cordis.patch.yml — SAMPLE bundle patch (template).
+#
+# Maps the framework's canonical subagents (verifier, security-auditor, …) to
+# DSH agent presets. Verify the @deepseek-ai/dsh-agent-preset and
+# @deepseek-ai/dsh-persona row shapes against your installed DSH version before
+# installing (see the `dsh-doc` skill and references/compositions.md). Each
+# preset is an ordered plugin list (persona + tools).
+- insert:
+    - id: preset-verifier
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: verifier
+        name: Verifier
+        description: Runs the app and checks a change works before the session reports done.
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >
+                Start the app with `make run`. Exercise the changed behavior and
+                the two nearest neighboring flows. Report what you ran, what you
+                saw, and any behavior that does not match plan.md or spec.md.
+                Do not fix anything; report only.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+
+    - id: preset-security-auditor
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: security-auditor
+        name: Security Auditor
+        description: Reviews a change for security and agentic-application vulnerabilities.
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >
+                Run a security pass: API security (gateway auth, validation,
+                audit, PII), secrets in source/config, prompt-injection surfaces
+                (OWASP ASI01/ASI10), and out-of-BOM dependencies. Report findings
+                tagged by severity; do not fix.
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'

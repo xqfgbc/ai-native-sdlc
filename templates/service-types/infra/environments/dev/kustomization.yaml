@@ -1,0 +1,14 @@
+# dev overlay — follows the newest build (sha tag) automatically.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - ../../apps/gateway
+namespace: dev
+images:
+  # ImageUpdateAutomation rewrites this marker via the image-reflector strategy.
+  - name: gateway
+    newTag: sha-latest # {"$imagepolicy": "flux-system:gateway-dev"}
+replicas:
+  - name: gateway
+    count: 1

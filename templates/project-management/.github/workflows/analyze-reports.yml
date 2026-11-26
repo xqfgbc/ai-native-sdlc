@@ -1,0 +1,29 @@
+name: Analyze execution reports
+
+# 定时 + 手动触发（D4）：读取各服务仓已上传的执行报告，更新 wiki 与 knowledge/proposals。
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly; tune to project cadence
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze reports
+        run: bash scripts/analyze-reports.sh .
+      - name: Commit wiki + proposals
+        run: |
+          git config user.name "sdlc-analyzer"
+          git config user.email "sdlc-analyzer@users.noreply.github.com"
+          git add wiki knowledge loop/04-build
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "chore(analyze): refresh wiki and proposals"
+            git push
+          fi

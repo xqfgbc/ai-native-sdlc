@@ -1,0 +1,16 @@
+# .codex/config.toml — Codex CLI project configuration.
+# Loaded only for trusted projects (`codex trust`). The organization may pin
+# non-negotiable settings in `requirements.toml` (admin-enforced, not
+# overridable) — prefer that for: allowed_sandbox_modes, approval policies,
+# permissions.filesystem.deny_read, network domain allowlists, MCP allowlists.
+#
+# This project file keeps only what belongs with the code. See
+# https://developers.openai.com/codex/config-reference for the full reference.
+
+[features]
+hooks = true
+
+# Default sandbox for this repo: workspace-write (agents may edit the repo but
+# not the rest of the host). read-only is safer for review-only sessions.
+[sandbox_workspace_write]
+network_access = false

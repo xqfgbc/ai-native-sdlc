@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks/production-gate.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hooks/no-secrets.sh"
+          },
+          {
+            "type": "command",
+            "command": "hooks/protect-paths.sh"
+          },
+          {
+            "type": "command",
+            "command": "hooks/spring-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "hooks/test-freeze.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

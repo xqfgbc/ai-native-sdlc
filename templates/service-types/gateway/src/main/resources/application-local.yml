@@ -1,0 +1,23 @@
+# Local profile for `make run` / docker-compose. No Kubernetes cluster, no
+# Config Server: routes use direct service URIs on the compose network.
+spring:
+  config:
+    import: ""
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: reference-service
+              uri: http://reference-service:8081
+              predicates:
+                - Path=/api/reference/**
+    kubernetes:
+      discovery:
+        enabled: false
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

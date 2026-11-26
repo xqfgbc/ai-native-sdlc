@@ -1,0 +1,62 @@
+# Flux image automation: scan ECR, select tags per environment, write the new
+# tag back to Git so each overlay reconciles the intended image.
+#
+# Policy per env (see infra/README.md): dev follows sha-*, uat/prod use semver
+# and only advance via a merged PR.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: gateway
+  namespace: flux-system
+spec:
+  image: <aws_account_id>.dkr.ecr.<region>.amazonaws.com/<ecr_repository>/gateway
+  interval: 5m
+  provider: aws
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: gateway-dev
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: gateway
+  policy:
+    semver:
+      range: ">=1.0.0"   # dev: use a `sha-*` regex policy to auto-follow builds
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: gateway-prod
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: gateway
+  policy:
+    semver:
+      range: ">=1.0.0 <2.0.0"
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: image-update
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+      messageTemplate: 'chore(image): {{range .Updated.Images}}{{println .}}{{end}}'
+    push:
+      branch: main
+  update:
+    strategy: Setters   # or image-reflector markers in the overlays

@@ -1,0 +1,32 @@
+# Build output
+build/
+.gradle/
+.gradle-home/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Secrets — never commit (the no-secrets hook also blocks these)
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+secrets/
+
+# Local scratch
+*.log
+*.tmp
+config-repo/*.local.yml
+
+# Framework-internal (excluded from scaffolded projects)
+research/
+
+# Archived legacy (kept locally, not published)
+archive/

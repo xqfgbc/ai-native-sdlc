@@ -1,0 +1,7 @@
+# Example app Kustomization: deployment + service for the gateway.
+# Add one app dir per service (config-server, gateway, and each services/<name>).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml

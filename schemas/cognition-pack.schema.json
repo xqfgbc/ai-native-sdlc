@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-native-sdlc/schemas/cognition-pack.schema.json",
+  "title": "CognitionPack",
+  "description": "Versioned, provenance-tracked constraints/skills/lessons/context published to service repos. A service repo pins a version; updates arrive by PR.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "items"],
+  "properties": {
+    "apiVersion": { "const": "sdlc/v1" },
+    "kind": { "const": "CognitionPack" },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "scope", "title", "status", "enforcement"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^(C|S|L|X)-\\d{3,}$", "description": "C=constraint, S=skill, L=lesson, X=context" },
+          "type": { "enum": ["constraint", "skill", "lesson", "context"] },
+          "scope": { "enum": ["project", "service", "process"] },
+          "title": { "type": "string" },
+          "statement": { "type": "string", "description": "The rule/procedure/fact itself." },
+          "owner": { "type": "string" },
+          "status": { "enum": ["proposed", "active", "retired"] },
+          "enforcement": { "enum": ["advisory", "deterministic"] },
+          "provenance": {
+            "type": "array",
+            "description": "Report ids / incidents that taught this.",
+            "items": { "type": "string" }
+          },
+          "path": { "type": "string", "description": "File under knowledge/ for the full text." }
+        }
+      }
+    }
+  }
+}

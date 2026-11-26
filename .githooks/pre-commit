@@ -1,0 +1,11 @@
+#!/bin/sh
+# .githooks/pre-commit — universal deterministic layer, runs for EVERY agent.
+# Install once per clone:  git config core.hooksPath .githooks
+# The GitHub Actions CI mirror (ci.yml) is the authoritative gate; this hook
+# fails the commit early but is local-only (fails open if not installed).
+set -e
+root="$(git rev-parse --show-toplevel)"
+"$root/hooks/no-secrets.sh"
+"$root/hooks/protect-paths.sh"
+"$root/hooks/spring-guard.sh"
+echo "pre-commit: ok"

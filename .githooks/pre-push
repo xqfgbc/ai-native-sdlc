@@ -1,0 +1,12 @@
+#!/bin/sh
+# .githooks/pre-push — block direct pushes to protected branches. The
+# authoritative gate is GitHub branch protection; this fails early.
+set -e
+branch="$(git rev-parse --abbrev-ref HEAD)"
+case "$branch" in
+  main|master|prod|uat)
+    echo "Direct push to '$branch' is blocked. Open a pull request instead." >&2
+    exit 1
+    ;;
+esac
+exit 0

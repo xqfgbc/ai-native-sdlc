@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-native-sdlc/schemas/service-registry.schema.json",
+  "title": "ServiceRegistry",
+  "description": "The project-management repo's source of truth for every generated service repo.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "project", "services"],
+  "properties": {
+    "apiVersion": { "const": "sdlc/v1" },
+    "kind": { "const": "ServiceRegistry" },
+    "project": { "type": "string" },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "repo", "phase", "requirements"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "type": { "enum": ["infra", "gateway", "config-server", "business", "frontend-vue"] },
+          "repo": { "type": "string", "description": "Repository path (local dir or org/repo)." },
+          "phase": { "enum": ["planned", "building", "testing", "deployed", "maintained"] },
+          "trustLevel": { "enum": ["L0", "L1", "L2", "L3"], "description": "Trust ladder: L0 manual, L1 verify loop, L2 multi-agent, L3 autopilot." },
+          "template": { "type": "object", "properties": { "name": { "type": "string" }, "version": { "type": "string" } } },
+          "cognitionPack": { "type": "object", "properties": { "name": { "type": "string" }, "version": { "type": "string" } } },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "status"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "status": { "enum": ["planned", "in-progress", "done"] }
+              }
+            }
+          },
+          "lastReport": { "type": "string" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

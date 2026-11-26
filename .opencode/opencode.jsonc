@@ -1,0 +1,24 @@
+{
+  // opencode project config. AGENTS.md at the repo root is the primary
+  // instruction file (read automatically); skills come from .agents/skills/.
+  "$schema": "https://opencode.ai/config.json",
+
+  // Hard, binary guardrails. Policies evaluate "tighten-only" and managed >
+  // system > console > global > project, so an org deny always beats a repo
+  // allow. These mirror the deterministic hooks/ layer for this agent.
+  "policies": [
+    { "action": "tool.use", "resource": "shell:git push *", "effect": "deny" },
+    { "action": "edit", "resource": ".env*", "effect": "deny" },
+    { "action": "read", "resource": ".env*", "effect": "deny" },
+    { "action": "edit", "resource": "build/**", "effect": "deny" },
+    { "action": "edit", "resource": ".gradle/**", "effect": "deny" },
+    { "action": "edit", "resource": "**/generated/**", "effect": "deny" }
+  ],
+
+  // Advisory permissions (ask rather than deny; policies above still win).
+  "permissions": [
+    { "action": "shell", "resource": "make *", "effect": "allow" },
+    { "action": "shell", "resource": "./gradlew *", "effect": "allow" },
+    { "action": "shell", "resource": "git *", "effect": "allow" }
+  ]
+}
