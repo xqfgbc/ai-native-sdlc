@@ -53,6 +53,17 @@ bash scripts/analyze-reports.sh .
 
 > 完整端到端流程见 **`DELIVERY.md` §13**；命令总索引见 **`scripts/README.md`**。
 
+### 2.1 AI 如何使用本仓库
+
+- 先读 `AGENTS.md`（治理指令）和 `CLAUDE.md`（快速参考）；门禁现状与改进方向见 `todo.md`。
+- 新 clone 的首个 Claude Code 会话会自动运行 `scripts/install-hooks.sh`；其他 agent 按 `AGENTS.md`
+  会话协议第 0 步执行一次（幂等）。
+- 生成项目/服务仓用 `scripts/new-*.sh`，不要手写模块；仓库命名规则由生成器强制。
+- 改完必跑：`bash scripts/selftest.sh`、`./scripts/validate-skills.sh`、`bash -n scripts/*.sh hooks/*.sh`。
+- 提交信息遵循 `AGENTS.md §6`；`pre-commit`、`commit-msg`、`pre-push` 会强制 secret/路径/Boot4、
+  消息格式和推送前验证；`release*` 分支必须走 PR。
+- 部署：本框架仓随 git 版本化；它生成的控制平面/服务仓的部署方式见各自仓的 `README.md`。
+
 ---
 
 ## 3. 三环模型
