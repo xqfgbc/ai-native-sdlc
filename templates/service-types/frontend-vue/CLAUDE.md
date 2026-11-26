@@ -14,3 +14,5 @@
 2. 按需加载 `.agents/skills/` 技能；没有接受的 plan 不写代码。
 3. 改完先验证：`bash scripts/app-verify.sh all`（itest 需 Docker/Podman），把输出贴进结果。
 4. **不要自行 push**；`release*` 分支必须走 PR，其余分支推送前会先跑本仓验证。
+5. **延期/受阻**：`bash scripts/debt.sh add --kind <tech|test|ops|security|intent> --title "…" \
+   --priority P2 --owner <你> --due YYYY-MM-DD`（登记到控制平面债务表）。

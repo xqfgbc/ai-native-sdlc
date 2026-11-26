@@ -153,6 +153,9 @@ intent/<YYYY-MM-DD>-<slug>/
 | `implementation-plan` | 阶段 3a（plan 模式） | `intent/<folder>/plan.md` |
 | `implement-change` | 阶段 3b | 按 plan 工作项的 commit |
 | `scaffold-microservice` | 阶段 3c | 新服务仓 + 登记 `services.json` |
+| `debt-registry` | 任何延期/复盘行动 | 债务登记、到期提醒、关闭证据（`scripts/debt.sh`） |
+| `review-proposals` | 签核前 / 积压复盘 | AI 预判 + 理由/置信度；人仍签核 |
+| `retro-to-rule` | 复盘/事故后 | finding → rule → check → owner / debt |
 | `commit-conventions` | 每次 commit 前 | `[姓名] #卡号 类型: 概述` 合规的 subject |
 | `verify-work` | 每个工作项后 | 粘贴的 build/test/lint/itest（`app-verify.sh`） |
 | `pr-review` | 阶段 5 | PR 上的 tagged findings 报告 |

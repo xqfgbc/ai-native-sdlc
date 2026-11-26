@@ -17,8 +17,8 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 
 ## 框架仓验证（根目录没有 Gradle 工程）
 
-- `bash scripts/selftest.sh` —— 应 **68 项全绿**
-- `./scripts/validate-skills.sh` —— 应 **OK（20 skills / 8 agents）**
+- `bash scripts/selftest.sh` —— 应 **71 项全绿**
+- `./scripts/validate-skills.sh` —— 应 **OK（23 skills / 8 agents）**
 - `bash -n scripts/*.sh` —— shell 语法检查
 
 ## 在生成的服务仓里验证

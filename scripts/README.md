@@ -33,7 +33,10 @@
 | 命令 | 用途 |
 |---|---|
 | `install-hooks.sh` | 启用本仓 `.githooks`（`core.hooksPath`）；幂等，clone 后/会话开始先跑 |
-| `signoff.py [--port 8765]` | 本地网页签核工具（仅 127.0.0.1）：浏览 proposal → 填 owner/enforcement → 调用 promote/sync |
+| `signoff.py [--port 8765]` | 本地网页签核工具（仅 127.0.0.1）：AI 预判 + owner/enforcement → promote/debt/sync |
+| `debt.sh <add|list|due|close|report>` | 项目债务登记表（control-plane `loop/07-maintain/debt/debt.json`） |
+| `review-proposals.sh [stats|record]` | AI 预判/人工决定记录/一致率统计（不激活） |
+| `sync-cognition-remote.sh <mgmt> <org/repo>` | 对无本地副本的服务仓开认知包升级 PR |
 | `app-verify.sh [build\|test\|lint\|itest\|all\|smoke]` | **统一验证 CLI**（Java/Node 自动识别） |
 | `autopilot-gate.sh` | L3 autopilot 确定性门禁（信任阶梯） |
 | `scan-findings.sh` | 确定性 foot-gun 扫描 → findings/inbox.md |

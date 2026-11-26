@@ -41,3 +41,10 @@
 
 `[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；AI 生成的代码用 `[AI-Agent]`。
 例：`[AI-Agent] #AC-1020 feat: add new processor for BMI3 calculation`
+
+## 债务与复盘
+
+- 延期/受阻/复盘行动一律登记债务：`bash scripts/debt.sh add ...`（kind/owner/priority/due 必填）。
+- AI 可以 add/note/start；close/drop 需要证据或人类确认。
+- 复盘按 `loop/07-maintain/retro-template.md`：每个 finding 必须落成 rule/check/test 或债务。
+- 签核前先跑 `bash scripts/review-proposals.sh .`，AI 建议仅供参考，人工用 `signoff.py` 签核。

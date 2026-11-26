@@ -26,8 +26,27 @@ bash scripts/intake.sh               # 把 intake/signals 聚成 candidates
 python3 scripts/signoff.py            # http://127.0.0.1:8765
 ```
 
-页面可查看候选与 provenance、填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，确认后签核，
-并可把新 pack 下发到本地可用的服务仓。
+页面展示 AI 预判（建议/置信度/理由），填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，
+确认后签核，或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR。
+
+### 债务与复盘
+
+债务表在 `loop/07-maintain/debt/debt.json`，覆盖 intent/design/build/test/deploy/ops/security：
+
+```bash
+bash scripts/debt.sh due            # 7 天内到期
+bash scripts/debt.sh add --kind tech --title "…" --priority P2 --owner <you> --due YYYY-MM-DD
+```
+
+AI 预判与人工决定一致率：
+
+```bash
+bash scripts/review-proposals.sh .          # 生成 knowledge/reviews/<id>.json
+bash scripts/review-proposals.sh stats
+```
+
+复盘模板：`loop/07-maintain/retro-template.md`；结论必须落成规则/门禁/测试或债务。
+定时任务 `knowledge-review.yml` 每日刷新预判与 `debt/DUE.md`，不会自动激活任何条目。
 
 ## AI 如何使用本项目
 

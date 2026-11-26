@@ -183,6 +183,18 @@ for p in "$WORK/demo-control-plane/knowledge/proposals/"*.json; do
   [ "$(jq -r '.repeat // false' "$p")" = "true" ] && rep_ok=1
 done
 [ "$rep_ok" -eq 1 ] && ok "distillation repeat detection (D4)" || bad "D4 repeat detection"
+( cd "$WORK/demo-control-plane" && bash scripts/review-proposals.sh . >/dev/null )
+review_file="$WORK/demo-control-plane/knowledge/reviews/$prop.json"
+[ -f "$review_file" ] && [ -n "$(jq -r '.ai.suggestion // ""' "$review_file")" ] \
+  && ok "AI proposal review generated" || bad "proposal review"
+stats_out="$( cd "$WORK/demo-control-plane" && bash scripts/review-proposals.sh record "$prop" --decision promote-advisory --owner tester@example.com >/dev/null 2>&1; bash scripts/review-proposals.sh stats 2>&1 )"
+printf '%s' "$stats_out" | grep -q "reviews with human decision: 1" \
+  && ok "review decision recorded (agreement stats)" || { echo "  stats: $stats_out"; bad "review decision"; }
+debt_id="$( cd "$WORK/demo-control-plane" && bash scripts/debt.sh add --kind tech --title "selftest debt" --priority P2 --due 2026-12-01 --owner tester --json | jq -r .id )"
+( cd "$WORK/demo-control-plane" && bash scripts/debt.sh due --days 30 --json | jq -e --arg id "$debt_id" '.[]|select(.id==$id)' >/dev/null \
+  && bash scripts/debt.sh close "$debt_id" --note selftest >/dev/null \
+  && [ "$(jq -r --arg id "$debt_id" '.items[]|select(.id==$id)|.status' loop/07-maintain/debt/debt.json)" = "done" ] ) \
+  && ok "debt registry add/due/close" || bad "debt registry"
 ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "validate-project passes" || bad "validate-project"
 [ -f "$WORK/demo-control-plane/loop/05-test/results.md" ] && ok "test management results (E1)" || bad "test results (E1)"
 [ -f "$WORK/demo-control-plane/wiki/dora.md" ] && ok "DORA metrics (E2)" || bad "dora (E2)"
