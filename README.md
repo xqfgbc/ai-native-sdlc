@@ -115,7 +115,7 @@ evals/                            agent 评测套件
 config/bands.yaml                 控制带（1σ/2σ/3σ）
 docs/                             project-factory / trust-ladder / agent-splitting / ...
 research/                         上游研究
-archive/legacy-single-repo/       旧单仓原型（已归档，保留可追溯）
+archive/                          本地归档（不发布）
 ```
 
 ---

@@ -7,7 +7,7 @@
 #
 # Covers: @MockBean/@SpyBean, pre-4 starters, Jackson 2, javax.*, Lombok @Data
 # on @Entity, open-in-view:true, ddl-auto update/create in prod config (incl.
-# config-repo/), actuator "*" exposure. Findings cite the fixing skill.
+# config (infra repo)/), actuator "*" exposure. Findings cite the fixing skill.
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -61,7 +61,7 @@ while IFS= read -r f; do
       grep -nE 'include:\s*["'"'"']?\*' "$f" \
         && fail "$rel exposes all actuator endpoints (include: \"*\") — expose an explicit allow-list (secure-api-review)."
       case "$rel" in
-        *application.yml|*application-dev.yml|*application-uat.yml|*application-prod.yml|*config-repo/*.yml|*config/*.yml)
+        *application.yml|*application-dev.yml|*application-uat.yml|*application-prod.yml|*config/*.yml)
           grep -nE 'ddl-auto:\s*(update|create|create-drop)' "$f" \
             && fail "$rel sets ddl-auto to update/create in shared/prod config — use validate + versioned migrations (aws-postgres)."
           ;;

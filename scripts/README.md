@@ -8,7 +8,6 @@
 |---|---|
 | `new-project.sh <project> [target]` | 生成项目管理仓（loop/execution/knowledge/wiki/sync + 自包含脚本） |
 | `new-service-repo.sh <type> <name> <mgmt> [target]` | 生成服务仓并登记到管理仓 |
-| `scaffold-project.sh` / `new-service.sh` | **legacy**（旧单仓模板，保留参考） |
 
 ## 闭环
 

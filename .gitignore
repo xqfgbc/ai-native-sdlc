@@ -2,7 +2,6 @@
 build/
 .gradle/
 .gradle-home/
-!gradle/wrapper/gradle-wrapper.jar
 out/
 
 # IDE / OS
@@ -23,10 +22,6 @@ secrets/
 # Local scratch
 *.log
 *.tmp
-config-repo/*.local.yml
-
-# Framework-internal (excluded from scaffolded projects)
-research/
 
 # Archived legacy (kept locally, not published)
 archive/

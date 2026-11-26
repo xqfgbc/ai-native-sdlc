@@ -5,17 +5,17 @@ spring:
   application:
     name: config-server
   profiles:
-    # Local default: filesystem backend over ./config-repo/.
-    # Production: activate the `git` profile (see the commented block) so the
-    # server reads per-service, per-environment config from the infra repo.
+    # 本地默认：native 文件系统后端，读 ./config/。
+    # 生产：启用 `git` profile（取消注释），让服务器从 infra 仓 config/ 读取
+    # 按服务、按环境的配置。
     active: native
   cloud:
     config:
       server:
         native:
-          search-locations: file:./config-repo/
+          search-locations: ${CONFIG_SEARCH_LOCATIONS:file:./config/}
         # git:
-        #   uri: https://github.com/<org>/<project>-infra.git
+        #   uri: ${CONFIG_GIT_URI:https://github.com/<org>/<project>-infra.git}
         #   search-paths: config
         #   default-label: main
         #   clone-on-start: true

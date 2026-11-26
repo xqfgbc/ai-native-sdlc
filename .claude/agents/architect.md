@@ -18,7 +18,7 @@ proposed child `intent/<date>-<slug>/intent.md` content.
 1. **Fix the target.** Take the change folder (`intent/<date>-<slug>/`) and read
    `intent.md` + `spec.md`. If there is no accepted spec, stop and say so.
 2. **Understand the codebase.** Read the build files, `AGENTS.md`, `CLAUDE.md`,
-   package layout, existing controllers/services/repositories, `config-repo/`,
+   package layout, existing controllers/services/repositories, `config/`（infra 仓）,
    `db/migration`, and tests. Plan against what exists; do not propose what is already there.
 3. **Load knowledge.** Read `spring-service-conventions` and, for the parts the
    change touches, `spring-data-jpa`, `spring-testing`, `secure-api-review`,
