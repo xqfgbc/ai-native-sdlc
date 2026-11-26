@@ -15,6 +15,10 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
 [ -f "$WORK/demo-control-plane/loop/04-build/services.json" ] && ok "new-project creates control-plane repo" || bad "new-project"
 [ -f "$WORK/demo-control-plane/scripts/analyze-reports.sh" ] && ok "control-plane repo is self-contained" || bad "self-contained"
 ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "fresh control-plane repo validates (empty registry, no reports)" || bad "validate empty project"
+[ -f "$WORK/demo-control-plane/.githooks/pre-commit" ] && [ -f "$WORK/demo-control-plane/hooks/no-secrets.sh" ] \
+  && ok "control-plane repo ships the git hooks" || bad "control-plane hooks shipped"
+[ "$(git -C "$WORK/demo-control-plane" config core.hooksPath 2>/dev/null)" = ".githooks" ] \
+  && ok "control-plane repo enables core.hooksPath" || bad "control-plane core.hooksPath"
 [ "$("$ROOT/scripts/new-project.sh" --print-name demo)" = "demo-control-plane" ] && ok "naming: project control repo -> <project>-control-plane" || bad "naming control-plane"
 if "$ROOT/scripts/new-project.sh" demo "$WORK/wrong-control-name" >/dev/null 2>&1; then
   bad "control-plane naming gate rejects non-conforming target"

@@ -18,6 +18,7 @@ knowledge/            沉淀环（constraints/skills/lessons/context/proposals/p
 wiki/                 自动生成的实时 wiki
 sync/                 契约 schema + 状态
 scripts/              自包含的 analyzer/validator（analyze-reports.sh / validate-project.sh）
+hooks/ + .githooks/   确定性护栏，生成后已设置 core.hooksPath（重新 clone 需重设）
 ```
 
 ## 2. 生成服务仓

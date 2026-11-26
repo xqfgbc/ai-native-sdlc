@@ -64,11 +64,18 @@ cp "$ROOT/scripts/analyze-reports.sh" "$ROOT/scripts/validate-project.sh" \
    "$ROOT/scripts/intake.sh" "$ROOT/scripts/intake-signal.sh" "$TARGET/scripts/"
 chmod +x "$TARGET"/scripts/*.sh
 
+# Deterministic guardrails: ship the universal hooks with the control repo.
+cp -R "$ROOT/hooks" "$TARGET/"
+cp -R "$ROOT/.githooks" "$TARGET/"
+chmod +x "$TARGET"/hooks/*.sh "$TARGET"/.githooks/*
+
 # Seed cognition pack.
 cat > "$TARGET/knowledge/pack.json" <<EOF
 {"apiVersion":"sdlc/v1","kind":"CognitionPack","metadata":{"name":"${PROJECT}-cognition","version":"0.1.0"},"items":[]}
 EOF
 
 ( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${PROJECT} control-plane repo" ) || true
+# Enable the hooks only after the bootstrap commit (factory content is trusted).
+( cd "$TARGET" && git config core.hooksPath .githooks ) || true
 echo "Created control-plane repo: $TARGET"
 echo "Next: scripts/new-service-repo.sh <type> <name> $TARGET"
