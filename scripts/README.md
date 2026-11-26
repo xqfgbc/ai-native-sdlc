@@ -45,4 +45,4 @@
 | `validate-skills.sh` | 技能/子代理配置校验 |
 | `sync-agent-adapters.sh` | `.agents/skills` → `.claude/skills` 同步 |
 
-> 约定：新增脚本 = 可复用、幂等、失败 fail-closed；写进本表，并在对应 skill 里只引用命令名。
+> 约定：新增脚本 = 可复用、幂等、fail-closed、**AI 可调用（非交互 + `--json` 结构化输出）**；写进本表，并在对应 skill 里只引用命令名。只有网页/人工入口的功能不算完成。

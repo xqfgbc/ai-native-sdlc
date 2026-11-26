@@ -70,6 +70,7 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 - 不要绕 BOM 加依赖（要加就在 PR 说明）
 - 不要用 Hystrix；用 Resilience4j
 - 不要硬编码 secrets，或写进提交的 `application.yml`
+- AI-first：新操作/工具/知识必须同时提供 AI 可调用入口（CLI/API + `--json` + skill/AGENTS 说明），不能只有网页或人工流程
 - 提交信息：`[<姓名>] #<卡号> <类型>: <概述>`（无卡号 `#N/A`，AI 生成用 `[AI-Agent]`）；
   `commit-guard`（执行前）与 `commit-msg`（提交时）都会拦不合规消息
 - 不要加 Eureka 或 Boot 3 的 starter 名

@@ -42,6 +42,11 @@
 `[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；AI 生成的代码用 `[AI-Agent]`。
 例：`[AI-Agent] #AC-1020 feat: add new processor for BMI3 calculation`
 
+## AI-first
+
+任何操作、改进、知识都必须提供 AI 可调用入口：CLI/API + 结构化输出（`--json`）+ AGENTS/skill 说明；
+网页或人工流程只能是补充。只有人类入口的功能视为未完成。
+
 ## 债务与复盘
 
 - 延期/受阻/复盘行动一律登记债务：`bash scripts/debt.sh add ...`（kind/owner/priority/due 必填）。

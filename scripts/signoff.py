@@ -18,6 +18,7 @@ import datetime
 import json
 import os
 import secrets
+import shutil
 import subprocess
 import sys
 import threading
@@ -81,6 +82,18 @@ def services():
         result.append({"name": entry.get("name"), "repo": repo, "localPath": local,
                        "exists": bool(local), "remote": "/" in repo})
     return result
+
+
+def tooling():
+    gh = bool(shutil.which("gh"))
+    gh_auth = False
+    if gh:
+        try:
+            gh_auth = subprocess.run(["gh", "auth", "status"], capture_output=True, timeout=5).returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            gh_auth = False
+    token = bool(os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"))
+    return {"gh": gh, "ghAuth": gh_auth, "token": token}
 
 
 def debt_items(days=7):
@@ -170,6 +183,10 @@ def sync(payload):
     if target["exists"]:
         args = ["bash", "scripts/sync-cognition.sh", ".", target["localPath"]]
     elif target["remote"]:
+        caps = tooling()
+        if not dry_run and not (caps["ghAuth"] or caps["token"]):
+            return 400, {"ok": False, "output": "remote sync needs gh (installed + logged in) or GH_TOKEN; "
+                                                 "otherwise edit .sdlc/cognition-pack.json and service.json in the web UI"}
         args = ["bash", "scripts/sync-cognition-remote.sh", ".", target["repo"]]
         if dry_run:
             args.append("--dry-run")
@@ -250,6 +267,9 @@ async function load() {
   const state = await call("GET", "/api/state");
   document.getElementById("state").innerHTML =
     `项目 <b>${esc(state.project)}</b> · pack <span class="mono">v${esc(state.pack.version)}</span> · active ${state.pack.items.length} 条 · 待签核 ${state.proposals.length} 条`;
+  const remoteReady = state.tooling.ghAuth || state.tooling.token;
+  document.getElementById("state").innerHTML +=
+    ` · 远端下发：<span class="chip ${remoteReady ? "ok" : "warn"}">${remoteReady ? (state.tooling.ghAuth ? "gh" : "token") : "不可用"}</span>`;
   document.getElementById("debt").innerHTML = state.debt.length
     ? `<h3>债务到期提醒（7 天内 ${state.debt.length} 条）</h3>` + state.debt.map(d => `<div>${esc(d.id)} due=${esc(d.due)} ${esc(d.priority)} — ${esc(d.title)}</div>`).join("")
     : '<h3>债务</h3><div>7 天内没有到期债务</div>';
@@ -286,11 +306,12 @@ async function load() {
   }
   const services = document.getElementById("services");
   services.innerHTML = state.services.map(s => {
-    const label = s.exists ? "本地下发" : (s.remote ? "远端 PR" : "不可用");
-    const disabled = (!s.exists && !s.remote) ? "disabled" : "";
+    const label = s.exists ? "本地下发" : (s.remote ? (remoteReady ? "远端 PR" : "远端不可用") : "不可用");
+    const disabled = (!s.exists && (!s.remote || !remoteReady)) ? "disabled" : "";
     return `<div class="row" style="margin:8px 0">
       <div><b>${esc(s.name)}</b> <span class="muted mono">${esc(s.repo)}</span>
-        ${s.exists ? '<span class="chip ok">本地可用</span>' : (s.remote ? '<span class="chip">远端</span>' : '<span class="chip warn">不可用</span>')}</div>
+        ${s.exists ? '<span class="chip ok">本地可用</span>' : (s.remote ? '<span class="chip">远端</span>' : '<span class="chip warn">不可用</span>')}
+        ${(!s.exists && s.remote && !remoteReady) ? '<span class="muted">安装 gh 或设置 GH_TOKEN，或按 README 在网页改两个文件</span>' : ""}</div>
       <button ${disabled} onclick="sync('${esc(s.name)}', ${s.exists})">${label}</button>
     </div>`;
   }).join("") || '<p class="muted">services.json 里没有服务。</p>';
@@ -355,7 +376,7 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 self.send_json(200, {"project": project, "pack": pack(), "proposals": proposals(),
                                      "services": services(), "reviews": reviews(),
-                                     "debt": debt_items(7)})
+                                     "debt": debt_items(7), "tooling": tooling()})
             return
         self.send_json(404, {"ok": False, "output": "not found"})
 

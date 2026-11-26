@@ -27,7 +27,7 @@ python3 scripts/signoff.py            # http://127.0.0.1:8765
 ```
 
 页面展示 AI 预判（建议/置信度/理由），填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，
-确认后签核，或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR。
+确认后签核，或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR（优先 gh；无 gh 时用 `GH_TOKEN` 直连 API；两者都没有则打印网页修改指引）。
 
 ### 债务与复盘
 

@@ -12,6 +12,8 @@
   缺 `@Version` 乐观锁、并发错误（`@Async`/`@Scheduled`、共享可变状态）。
 - **安全（Security）**：注入风险、鉴权缺口（所有端点经网关；除 `/actuator/health` 外无匿名路由）、
   日志含 PII、代码含 secrets、缺输入校验、agentic 应用风险（不可信输入转发给下游 agent/tool — OWASP ASI01/ASI10）。
+- **AI-first**：新操作/工具/知识必须同时提供 AI 可调用入口（CLI/API + 结构化输出 + AGENTS/skill 说明）；
+  只有网页或纯人工入口的变更标 Important。
 - **合规（Compliance）**：变更与本次 `spec.md`/`plan.md` 一致；遵守 `CLAUDE.md` 约定与
   `spring-service-conventions`、`spring-data-jpa`、`spring-testing` 技能；尊重生成的 `ArchitectureTest`；
   出站调用满足 `resiliency-review`；数据源变更满足 `aws-postgres`；部署变更遵循 `gitops-deploy`

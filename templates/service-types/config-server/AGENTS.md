@@ -20,6 +20,11 @@ commit 触发 `.sdlc/collect.sh`（增量 facts + AI 候选认知）→ 上传�
 ## 硬规则
 不写 secrets；不绕过 hooks/CI；cognition pack 版本锁定，不私自改。
 
+## AI-first
+
+任何操作、改进、知识都必须提供 AI 可调用入口：CLI/API + 结构化输出（`--json`）+ AGENTS/skill 说明；
+网页或人工流程只能是补充。只有人类入口的功能视为未完成。
+
 ## 提交信息
 
 `[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；AI 生成的代码用 `[AI-Agent]`。
