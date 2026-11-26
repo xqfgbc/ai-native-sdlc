@@ -10,6 +10,7 @@ import com.tngtech.archunit.library.GeneralCodingRules;
 import jakarta.persistence.Entity;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
 import static com.tngtech.archunit.core.domain.JavaCall.Predicates.target;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
@@ -93,6 +94,14 @@ class ArchitectureTest {
         noClasses().should().callMethodWhere(
                         target(owner(equivalentTo(CompletableFuture.class)))
                                 .and(nameMatching("(supplyAsync|runAsync)")))
+                .allowEmptyShould(true)
+                .check(CLASSES);
+    }
+
+    @Test
+    void noHandBuiltRestClient() {
+        noClasses().should().callMethodWhere(
+                        target(owner(equivalentTo(RestClient.class))).and(nameMatching("(create|builder)")))
                 .allowEmptyShould(true)
                 .check(CLASSES);
     }
