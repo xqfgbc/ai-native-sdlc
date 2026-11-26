@@ -87,7 +87,7 @@ case "${1:-}" in
             'if .human != null then . else
                .ai.suggestion="reject-duplicate" | .ai.confidence="high"
                | .ai.duplicateOf=$cid | .ai.sharedTokens=$toks
-               | .ai.reasons=((.ai.reasons // []) + ["an active item already covers this: "+$cid])
+               | .ai.reasons=(((.ai.reasons // []) + ["an active item already covers this: "+$cid]) | unique)
              end' "$RF" > "$tmp" && mv "$tmp" "$RF"
         fi
         echo "cluster: $pid -> duplicate of active $best_id ($(printf '%s' "$best_shared" | paste -sd, -))"
