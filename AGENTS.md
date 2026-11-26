@@ -179,11 +179,11 @@ Codex、opencode、DeepSeek Harness 原生读取；`.claude/skills/<name>/` 是�
 
 ## 6. 提交与 PR 约定
 
-- `intent(<slug>): capture <title>` — intent 进入版本控制。
-- `spec(<slug>): requirements and design`
-- `plan(<slug>): implementation plan`
-- `feat(<slug>): <work item>` / `fix(<slug>): <work item>` — 实现 commit；正文写 plan 工作项并粘贴验证输出。
-- `docs(agents): <correction>` — 来自重复评审发现的指令/技能纠正。
+- 格式：`[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；**AI 生成的代码姓名用 `AI-Agent`**。
+- 类型：`feat`（新增/修改功能）、`fix`、`refactor` 最常用；也允许 `docs`/`chore`/`test`/`perf`/`ci`/`build`/`revert`。
+- 例：`[AI-Agent] #AC-1020 feat: add new processor for BMI3 calculation`
+- intent/spec/plan 产物：`[AI-Agent] #N/A docs: capture intent <title>` / `docs: requirements and design` / `docs: implementation plan`。
+- 来自重复评审发现的指令/技能纠正：`[AI-Agent] #N/A docs: <correction>`。
 - PR：标题 `[<slug>] <title>`；描述链接 intent 目录、陈述风险、包含 verify-work 输出块。
 - 强制层：`pre-commit`（secret/路径/Boot4）、`commit-msg`（上面的消息格式）、`pre-push`（`release*` 必须走 PR；
   其余分支可直推，但推送前跑本仓验证）。`--no-verify` 只有人类明确批准时才可用。

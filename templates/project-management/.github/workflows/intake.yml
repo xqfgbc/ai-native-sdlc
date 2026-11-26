@@ -40,6 +40,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no new candidates"
           else
-            git commit -m "chore(intake): cluster signals"
+            git commit -m "[AI-Agent] #N/A chore: cluster signals"
             git push
           fi

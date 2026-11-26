@@ -72,8 +72,8 @@ research/                              上游研究（playbook、Spring 坑、Gi
 
 ```bash
 $ bash scripts/selftest.sh
-... 63 项 PASS ...
-selftest: 63 passed, 0 failed
+... 64 项 PASS ...
+selftest: 64 passed, 0 failed
 
 $ ./scripts/validate-skills.sh
 validate-skills: OK (19 skills, 8 agents)
@@ -112,7 +112,7 @@ scripts/new-service-repo.sh infra aws ./myproj-control-plane               # →
 
 # 3) 在服务仓里开发并提交 → 自动采集 → 管理仓分析
 cd myproj-speaker-management
-git add -A && git commit -m "feat: speaker status [learn] prefer RestClient over RestTemplate"
+git add -A && git commit -m "[AI-Agent] #N/A feat: speaker status [learn] prefer RestClient over RestTemplate"
 bash .sdlc/collect.sh
 cd ../myproj-control-plane && bash scripts/analyze-reports.sh .
 ```
@@ -260,7 +260,7 @@ bash scripts/validate-project.sh .
 ## 13. 现在怎么用（端到端一次跑通）
 
 ```bash
-# 0) 框架自检（应 63 项全绿）
+# 0) 框架自检（应 64 项全绿）
 bash scripts/selftest.sh
 
 # 1) 生成项目 + 服务
@@ -271,7 +271,7 @@ scripts/new-service-repo.sh business speaker ./myproj-control-plane   # → mypr
 cd myproj-speaker-management
 bash scripts/app-verify.sh all          # build+test+lint+itest（Java）；前端走 npm
 # 在 feature-map.md 记录：功能 → 需求 → 验证命令 → 状态
-git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
+git add -A && git commit -m "[AI-Agent] #N/A feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                   # 增量报告 + hash 链
 
 # 3) 管理仓：分析 → 看 wiki / 测试 / DORA

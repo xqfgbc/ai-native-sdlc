@@ -95,9 +95,15 @@ if ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WOR
 else
   ok "commit-msg rejects an untyped message"
 fi
-printf 'feat(speaker): add endpoint\n' > "$WORK/msg-good.txt"
+printf '[AI-Agent] #N/A feat: add endpoint\n' > "$WORK/msg-good.txt"
 ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WORK/msg-good.txt" >/dev/null 2>&1 ) \
-  && ok "commit-msg accepts a typed message" || bad "commit-msg accepts a typed message"
+  && ok "commit-msg accepts the ticket-based format" || bad "commit-msg accepts the ticket-based format"
+printf 'feat(speaker): legacy format\n' > "$WORK/msg-legacy.txt"
+if ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WORK/msg-legacy.txt" ) >/dev/null 2>&1; then
+  bad "commit-msg rejects the legacy type(scope) format"
+else
+  ok "commit-msg rejects the legacy type(scope) format"
+fi
 # Branch policy: release* requires a PR; every other branch may be pushed directly.
 mkdir -p "$WORK/gate-repo/.githooks"
 cp "$ROOT/.githooks/pre-push" "$WORK/gate-repo/.githooks/pre-push"
@@ -134,10 +140,10 @@ sig="$(ls "$WORK/demo-control-plane/intake/signals/"*.md 2>/dev/null | grep -v '
 ( cd "$WORK/demo-order-service-management" && mkdir -p sdlc/session-log \
   && printf '%s\n' '# session 20260101-0000' '' '## 人的指令' '- build the order status endpoint' '' '## 规则缺口' '- prefer RestClient over RestTemplate' > sdlc/session-log/20260101-0000.md \
   && echo "# demo" >> README.md && git add -A \
-  && git commit -q -m "feat: order status [learn] prefer @ServiceConnection" \
+  && git commit -q -m "[AI-Agent] #N/A feat: order status [learn] prefer @ServiceConnection" \
   && bash .sdlc/collect.sh >/dev/null )
 ( cd "$WORK/demo-order-service-management" && echo "more" >> README.md && git add -A \
-  && git commit -q -m "fix: null status [learn] prefer @ServiceConnection" && bash .sdlc/collect.sh >/dev/null )
+  && git commit -q -m "[AI-Agent] #N/A fix: null status [learn] prefer @ServiceConnection" && bash .sdlc/collect.sh >/dev/null )
 REPORTS=( "$WORK/demo-control-plane/execution/build/order-service/reports/"*.json )
 [ "${#REPORTS[@]}" -eq 2 ] && ok "two reports uploaded (idempotent)" || bad "reports count"
 chain_ok=0

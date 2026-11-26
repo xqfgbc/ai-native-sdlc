@@ -36,3 +36,8 @@
 - 项目级约束/技能变更：只写 `knowledge/proposals/`，**不得**直接改 `knowledge/pack.json` 的 active 条目。
 - 不把 secrets / PII 写进任何 artifacts。
 - 门禁 owner 不清时停下询问。
+
+## 提交信息
+
+`[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；AI 生成的代码用 `[AI-Agent]`。
+例：`[AI-Agent] #AC-1020 feat: add new processor for BMI3 calculation`

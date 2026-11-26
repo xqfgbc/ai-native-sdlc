@@ -20,3 +20,8 @@ commit 触发 `.sdlc/collect.sh`（增量 facts + AI 候选认知）→ 上传�
 
 ## 硬规则
 不写 secrets；不绕过 hooks/CI；cognition pack 版本锁定，不私自改。
+
+## 提交信息
+
+`[<姓名>] #<卡号> <类型>: <概述>`；无卡号用 `#N/A`；AI 生成的代码用 `[AI-Agent]`。
+例：`[AI-Agent] #AC-1020 feat: add new processor for BMI3 calculation`

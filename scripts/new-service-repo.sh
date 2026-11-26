@@ -198,7 +198,7 @@ cat > "$TARGET/feature-map.md" <<EOF
 | _example: GET /api/hello_ | REQ-____ | \`bash scripts/app-verify.sh itest\` → AppEndpointIT | planned |
 EOF
 
-( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${SERVICE_NAME} (${TYPE}) from template" ) || true
+( cd "$TARGET" && git init -q && git add -A && git commit -q -m "[AI-Agent] #N/A chore: bootstrap ${SERVICE_NAME} (${TYPE}) from template" ) || true
 # Enable the hooks only after the bootstrap commit: factory-generated content is
 # trusted, while every human/agent commit from here on is gated.
 ( cd "$TARGET" && git config core.hooksPath .githooks ) || true

@@ -18,7 +18,7 @@ after each, and commit so each commit names the plan work item it implements.
    `resiliency-review` (outbound calls).
 4. After every work item run the `verify-work` loop: `make build && make lint &&
    make test && make itest`, and paste the output into the commit body.
-5. Commit per work item: `feat(<slug>): <work item>` / `fix(<slug>): <work item>`.
+5. Commit per work item: `[AI-Agent] #<ticket|N/A> feat: <work item>` / `fix: <work item>`.
 6. If reality departs from the plan, update `plan.md` in the same commit.
 7. When done, open a PR titled `[<slug>] <title>`, linking the intent folder and
    pasting the verification output block.

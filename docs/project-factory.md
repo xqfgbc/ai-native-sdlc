@@ -69,7 +69,7 @@ scripts/new-service-repo.sh <type> <name> <management-repo> [target-dir] [--allo
 在服务仓里：
 
 ```bash
-git add -A && git commit -m "feat: ... [learn] <一条值得沉淀的规则>"
+git add -A && git commit -m "[AI-Agent] #N/A feat: ... [learn] <一条值得沉淀的规则>"
 bash .sdlc/collect.sh
 ```
 

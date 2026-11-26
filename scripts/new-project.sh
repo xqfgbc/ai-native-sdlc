@@ -80,7 +80,7 @@ cat > "$TARGET/knowledge/pack.json" <<EOF
 {"apiVersion":"sdlc/v1","kind":"CognitionPack","metadata":{"name":"${PROJECT}-cognition","version":"0.1.0"},"items":[]}
 EOF
 
-( cd "$TARGET" && git init -q && git add -A && git commit -q -m "chore: bootstrap ${PROJECT} control-plane repo" ) || true
+( cd "$TARGET" && git init -q && git add -A && git commit -q -m "[AI-Agent] #N/A chore: bootstrap ${PROJECT} control-plane repo" ) || true
 # Enable the hooks only after the bootstrap commit (factory content is trusted).
 ( cd "$TARGET" && git config core.hooksPath .githooks ) || true
 echo "Created control-plane repo: $TARGET"

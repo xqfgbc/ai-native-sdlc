@@ -26,7 +26,7 @@
 ```bash
 # 0) clone 后先启用确定性护栏（幂等）；Claude Code 会在会话开始时自动执行
 bash scripts/install-hooks.sh
-#    框架自检：应 63 项全绿
+#    框架自检：应 64 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -43,7 +43,7 @@ scripts/new-service-repo.sh configuration-data prod   ./myproj-control-plane  # 
 # 3) 服务仓：改代码 → 自验 → 提交 → 采集
 cd myproj-speaker-management
 bash scripts/app-verify.sh all            # build+test+lint+itest
-git add -A && git commit -m "feat: speaker status [learn] prefer RestClient"
+git add -A && git commit -m "[AI-Agent] #N/A feat: speaker status [learn] prefer RestClient"
 bash .sdlc/collect.sh                     # 增量报告 + hash 链
 
 # 4) 管理仓：分析 → 看 wiki / 测试 / DORA
@@ -170,7 +170,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（63 项）。
+- 框架自检：`bash scripts/selftest.sh`（64 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（19 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -229,4 +229,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 63 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 64 passed, 0 failed`。

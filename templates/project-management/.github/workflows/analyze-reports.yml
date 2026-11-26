@@ -24,6 +24,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no changes"
           else
-            git commit -m "chore(analyze): refresh wiki and proposals"
+            git commit -m "[AI-Agent] #N/A chore: refresh wiki and proposals"
             git push
           fi
