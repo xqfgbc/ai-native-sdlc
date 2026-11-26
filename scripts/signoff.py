@@ -172,13 +172,13 @@ async function load() {
         <p>${esc(p.statement || "")}</p>
         <p class="muted mono">provenance: ${esc((p.provenance || []).join(", "))}</p>
         <div class="row">
-          <div><label>owner（你的名字或邮箱）</label><input id="owner-${esc(p.id)}" placeholder="例如 zhangsan@example.com"></div>
-          <div><label>enforcement</label><select id="enf-${esc(p.id)}">
+          <div><label>owner（你的名字或邮箱）</label><input id="owner-${esc(p.id)}" placeholder="例如 zhangsan@example.com" oninput="updateCmd('${esc(p.id)}')"></div>
+          <div><label>enforcement</label><select id="enf-${esc(p.id)}" onchange="updateCmd('${esc(p.id)}')">
             <option value="deterministic">deterministic（需落成 hook/lint/CI）</option>
             <option value="advisory">advisory（建议性）</option></select></div>
-          <button onclick="promote('${esc(p.id)}', true)">预览命令</button>
-          <button class="primary" onclick="promote('${esc(p.id)}', false)">签核</button>
+          <button class="primary" onclick="promote('${esc(p.id)}')">签核</button>
         </div>
+        <pre class="mono" id="cmd-${esc(p.id)}"></pre>
       </section>`).join("");
   }
   const services = document.getElementById("services");
@@ -189,11 +189,22 @@ async function load() {
       <button ${s.exists ? "" : "disabled"} onclick="sync('${esc(s.name)}')">下发</button>
     </div>`).join("") || '<p class="muted">services.json 里没有服务。</p>';
 }
-async function promote(id, dryRun) {
+function commandFor(id) {
+  const owner = document.getElementById("owner-" + id).value.trim() || "<你的名字或邮箱>";
+  const enforcement = document.getElementById("enf-" + id).value;
+  return "bash scripts/promote-proposal.sh . " + id + " " + owner + " " + enforcement;
+}
+function updateCmd(id) {
+  const el = document.getElementById("cmd-" + id);
+  if (el) el.textContent = commandFor(id);
+}
+async function promote(id) {
   const owner = document.getElementById("owner-" + id).value.trim();
   const enforcement = document.getElementById("enf-" + id).value;
-  if (!owner && !dryRun) { alert("请填写 owner：签核必须由人完成"); return; }
-  const data = await call("POST", "/api/promote", {id, owner: owner || "preview", enforcement, dryRun});
+  if (!owner) { alert("请填写 owner：签核必须由人完成"); return; }
+  const command = commandFor(id);
+  if (!confirm("将执行：\n" + command + "\n\n确认签核？")) return;
+  const data = await call("POST", "/api/promote", {id, owner, enforcement});
   log(data); load();
 }
 async function sync(name) {

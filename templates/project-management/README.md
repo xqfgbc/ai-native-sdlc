@@ -26,7 +26,7 @@ bash scripts/intake.sh               # 把 intake/signals 聚成 candidates
 python3 scripts/signoff.py            # http://127.0.0.1:8765
 ```
 
-页面可查看候选与 provenance、填写 owner、选择 `deterministic|advisory`、先预览命令再签核，
+页面可查看候选与 provenance、填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，确认后签核，
 并可把新 pack 下发到本地可用的服务仓。
 
 ## AI 如何使用本项目
