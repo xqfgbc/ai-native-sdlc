@@ -83,6 +83,30 @@
 > - 无法确定性判断的规则不要写成门禁，写成 skill/AGENTS 指引。
 > - 生成器改动必须同时更新 `templates/` 与存量仓同步方式（见 TODO-07）。
 
+### 4.0 背景：只 clone 服务仓（无 control-plane）的降级行为
+
+实测对象：`ses-speaker-management`（已推到 GitHub 私有仓），证据来自仓内脚本源码与本地运行。
+
+| 能力 | 单仓是否可用 | 现状与证据 | 风险 |
+|---|---|---|---|
+| 构建/启动/测试 | ✅ | local profile + H2，不依赖 control-plane | 无 |
+| pre-commit / commit-msg / pre-push | ✅ | `hooks/` + `.githooks/` 随仓复制 | 无 |
+| SessionStart 自动装 hook | ✅ | `.claude/settings.json` + `scripts/install-hooks.sh` | 无 |
+| 技能/子代理 | ✅ | `.agents/skills` 19 个、`.claude/agents` 8 个随仓复制 | 无 |
+| `collect.sh` 本地采集 | ⚠️ 降级 | control-plane 目录不存在时走 else 分支：报告留在 `sync/reports/<sha>.json`，**仍推进 `lastCollectedSha`** | 报告滞留后再也不会被采集 |
+| 上传到 control-plane | ⚠️ 静默 no-op | `upload-report.sh` 在缺 `GH_TOKEN`/`MANAGEMENT_REPO` 时打印 skipped 并 exit 0 | CI 不会红，但也没人知道闭环断了 |
+| analyze / promote / sync | ❌ 缺失 | 三个脚本只在 control-plane 仓 | 知识闭环后半段无法执行 |
+| 认知 pack 更新 | ❌ 不更新 | 保持锁定版本（当前 `0.0.0`） | 不影响运行，但认知不增长 |
+| 项目级流程（intent/spec/plan → `loop/`） | ❌ 缺失 | control-plane 职责 | 只能做服务内开发 |
+
+三个已知坑：
+
+1. `lastCollectedSha` 在控制平面缺席时仍前进 → 之后的 collect 不会重采这些 commit，也没有本地补传命令。
+2. `managementRepo` 在 `.sdlc/config.json` / `service.json` 里是**绝对路径**（`/Users/<user>/.../ses-control-plane`）→
+   换机器/换目录即失效，即使 control-plane 存在也不会被找到。
+3. `upload-report.sh` 硬编码控制平面默认分支为 `main`（`gh repo clone --branch main`、`--base main`），
+   而本项目控制平面默认是 `master` → 配好 token 后远端 PR 仍会失败。
+
 ### [ ] TODO-01（P1）变更范围白名单（scope guard）
 
 - 现状：`pre-commit` 只看内容违规，不看"这次允许改哪些文件"。
@@ -145,9 +169,53 @@
 
 ### [ ] TODO-09（P3）SES 服务仓 CI 镜像
 
-- 现状：`ses-*` 仓无 remote、无 CI，本地 hook 是唯一防线。
-- 建议：仓推到远端后加 GitHub Actions：`app-verify all`（含 Testcontainers）+ `validate-skills`，作为权威门禁；本地 hook 只做快速失败。
+- 现状：`ses-control-plane` / `ses-speaker-management` 已有 GitHub 私有远端，但**没有验证 CI**；
+  只带了 `collect.yml`（缺 `MANAGEMENT_REPO`/`SYNC_TOKEN` 时上传 no-op），本地 hook 仍是唯一验证门禁。
+- 建议：加 GitHub Actions：`app-verify all`（含 Testcontainers）+ `validate-skills`，作为权威门禁；
+  本地 hook 只做快速失败；`collect.yml` 的上传步骤保持"未配置即跳过"。
 - 验收：PR 上 CI 必跑且失败阻断合并；本地与 CI 的命令一致（同一脚本入口）。
+
+### [ ] TODO-10（P1）managementRepo 解析与显式失败
+
+- 现状：`managementRepo` 是生成时的绝对路径；换机器/目录后 collect 静默降级（见 4.0）。
+- 建议解析顺序：`SDL_MGMT_REPO` 环境变量 → `<service-repo>/../<project>-control-plane`（相对路径）→
+  `.sdlc/config.json` 的值。解析不到时：collect 仍生成本地报告，但输出明确警告
+  `collect: management repo not found at <path>`，不静默。
+- 验收：
+  - 在临时目录只放服务仓（无 control-plane）运行 collect → 报告生成、有警告、退出码 0；
+  - 设置 `SDL_MGMT_REPO=<临时控制平面>` 后，新的 commit 能被 collect 正确上传；
+  - 相对路径克隆（控制平面与服务仓同级）自动找到；
+  - selftest 覆盖以上三种情况（2–3 条用例）。
+
+### [ ] TODO-11（P1）采集位与上传位分离 + 本地补传
+
+- 现状：`lastCollectedSha` 同时表示“已采集”和“已上传”，两者耦合导致报告滞留后永不补传（见 4.0 坑 1）。
+- 建议：
+  - 在 `.sdlc/config.json`（或 `sync/state.json`）增加 `lastUploadedSha`；
+  - collect 只在报告成功进入控制平面（本地目录或远端 PR）后推进上传位；
+  - 新增 `scripts/replay-reports.sh <management-repo>`：把 `sync/reports/` 中 `lastUploadedSha` 之后的报告补传，
+    幂等（已存在则跳过），同时推进上传位。
+- 验收：
+  - 无控制平面连续 collect 两次 → 报告在本地、上传位不动；
+  - replay 后 control-plane `execution/<stage>/<service>/reports/` 出现全部报告；
+  - 重复 replay 幂等；selftest 覆盖（3 条用例）。
+
+### [ ] TODO-12（P2）upload-report 的基线分支可配置
+
+- 现状：硬编码 `main`（见 4.0 坑 3）；本项目控制平面默认 `master`。
+- 建议：新增 `--base <branch>` 参数；不传时用 `gh repo view --json defaultBranchRef` 探测，
+  clone（`--branch`）与 `gh pr create --base` 使用同一个基础分支。
+- 验收：
+  - 对默认分支为 `master` 的控制平面能成功开 PR；
+  - 对默认分支为 `main` 的仓仍可用；
+  - 未配置 `GH_TOKEN` 时保持 skipped/exit 0。
+
+### [ ] TODO-13（P3）服务仓 README 的“独立开发（无 control-plane）”小节
+
+- 现状：模板 README 只描述完整闭环路径，未说明单仓降级行为（见 4.0）。
+- 依赖：TODO-10、TODO-11（`SDL_MGMT_REPO` 与 `replay-reports.sh` 落地后写真实命令）。
+- 内容：4.0 的降级表 + 单仓可用的验证命令 + 补传步骤 + 何时必须要有 control-plane。
+- 验收：模板 README 与已生成服务仓 README 同步；命令可复制执行；不承诺尚未实现的能力。
 
 ---
 
@@ -188,3 +256,6 @@ git checkout main && git push gate-test main                 # 应被拦
 - 2026-11-26：新增 `commit-msg`、`pre-push` 验证；`no-secrets` 修复（内容检测与 stdin 挂起）；业务模板 `ArchitectureTest` 修复 checkstyle；selftest 59 项。
 - 2026-11-26：本文件建立，记录 sun-life 门禁模型与 9 项改进方向。
 - 2026-11-26：push 规则调整——只有 `release*` 必须走 PR，其余分支（含 main/master）可直推但必须先通过本仓验证；selftest 增 2 条分支策略用例（61 项）。
+- 2026-11-26：记录“只 clone 服务仓（无 control-plane）”的降级行为（§4.0），新增 TODO-10～13：
+  managementRepo 解析与显式失败、采集位/上传位分离 + 本地补传、upload-report 基线分支、README 独立开发小节；
+  并按现状更新 TODO-09（SES 仓已有远端、仍无验证 CI）。
