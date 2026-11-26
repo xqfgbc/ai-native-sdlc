@@ -163,6 +163,13 @@ for f in "${REPORTS[@]}"; do
   jq -e '.spec.candidateKnowledge[]? | select(.evidenceRefs[]? | contains("session-log"))' "$f" >/dev/null 2>&1 && session_ok=1
 done
 [ "$session_ok" -eq 1 ] && ok "session-log derived candidate (D1)" || bad "session-log candidate"
+( cd "$WORK/demo-order-service-management" && echo "no-learn" >> README.md && git add -A \
+  && git commit -q -m "[AI-Agent] #N/A chore: no knowledge marker" && bash .sdlc/collect.sh >/dev/null )
+no_learn_sha="$(git -C "$WORK/demo-order-service-management" rev-parse HEAD)"
+no_learn_report="$(find "$WORK/demo-control-plane/execution" -name "$no_learn_sha.json" | head -1)"
+[ -n "$no_learn_report" ] && [ "$(jq -r '.spec.stage' "$no_learn_report")" = "maintain" ] \
+  && [ "$(jq '.candidateKnowledge|length' "$no_learn_report")" = "0" ] \
+  && ok "commits without [learn] produce no candidate" || bad "candidate filter (no [learn])"
 
 # 4. analyze + validate
 ( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )

@@ -26,7 +26,7 @@
 ```bash
 # 0) clone 后先启用确定性护栏（幂等）；Claude Code 会在会话开始时自动执行
 bash scripts/install-hooks.sh
-#    框架自检：应 66 项全绿
+#    框架自检：应 67 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -170,7 +170,7 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（66 项）。
+- 框架自检：`bash scripts/selftest.sh`（67 项）。
 - 技能/子代理配置：`./scripts/validate-skills.sh`（20 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
@@ -229,4 +229,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 66 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 67 passed, 0 failed`。

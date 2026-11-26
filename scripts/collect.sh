@@ -49,10 +49,12 @@ DEPS="${DEPS:-[]}"
 
 # Stage heuristic from commit subjects.
 SUBJECTS="$(git log --format=%s "$FROM..$TO" 2>/dev/null || true)"
+# Strip the "[name] #ticket " commit prefix before classifying the stage.
+SUBJECT_BODY="$(echo "$SUBJECTS" | sed -E 's/^\[[^]]+\][[:space:]]+#[^[:space:]]+[[:space:]]+//')"
 STAGE="build"
-echo "$SUBJECTS" | grep -qiE '^(test|测试)' && STAGE="test"
-echo "$SUBJECTS" | grep -qiE '^(deploy|发布)' && STAGE="deploy"
-echo "$SUBJECTS" | grep -qiE '^(chore|docs)' && STAGE="maintain"
+echo "$SUBJECT_BODY" | grep -qiE '^(test|测试)' && STAGE="test"
+echo "$SUBJECT_BODY" | grep -qiE '^(deploy|发布)' && STAGE="deploy"
+echo "$SUBJECT_BODY" | grep -qiE '^(chore|docs)' && STAGE="maintain"
 
 # A4/D18: redact secret-looking content before persisting anything.
 scrub() {
@@ -65,6 +67,9 @@ while IFS= read -r line; do
   [ -n "$line" ] || continue
   subject="$(echo "$line" | cut -d'|' -f2-)"
   sha="$(echo "$line" | cut -d'|' -f1)"
+  # Only subjects that carry the explicit marker become candidates; a plain
+  # commit is an execution fact, not knowledge.
+  case "$subject" in *"[learn]"*) ;; *) continue ;; esac
   proposal="$(echo "$subject" | sed -E 's/.*\[learn\][[:space:]]*//' | scrub)"
   [ -n "$proposal" ] || continue
   CANDIDATES="$(echo "$CANDIDATES" | jq --arg p "$proposal" --arg s "$sha" \

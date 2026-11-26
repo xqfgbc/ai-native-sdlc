@@ -72,8 +72,8 @@ research/                              上游研究（playbook、Spring 坑、Gi
 
 ```bash
 $ bash scripts/selftest.sh
-... 66 项 PASS ...
-selftest: 66 passed, 0 failed
+... 67 项 PASS ...
+selftest: 67 passed, 0 failed
 
 $ ./scripts/validate-skills.sh
 validate-skills: OK (20 skills, 8 agents)
@@ -260,7 +260,7 @@ bash scripts/validate-project.sh .
 ## 13. 现在怎么用（端到端一次跑通）
 
 ```bash
-# 0) 框架自检（应 66 项全绿）
+# 0) 框架自检（应 67 项全绿）
 bash scripts/selftest.sh
 
 # 1) 生成项目 + 服务
