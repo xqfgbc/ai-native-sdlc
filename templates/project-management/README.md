@@ -18,6 +18,17 @@ bash scripts/intake.sh               # 把 intake/signals 聚成 candidates
 - 看结果：直接打开 `wiki/index.md`（任意 Markdown 渲染器即可）。
 - 登记新服务：在框架仓运行 `scripts/new-service-repo.sh <type> <name> <本仓>`。
 
+### 人工签核（Web 工具）
+
+签核必须由人完成；工具只在 127.0.0.1 监听，内部调用 `promote-proposal.sh` / `sync-cognition.sh`：
+
+```bash
+python3 scripts/signoff.py            # http://127.0.0.1:8765
+```
+
+页面可查看候选与 provenance、填写 owner、选择 `deterministic|advisory`、先预览命令再签核，
+并可把新 pack 下发到本地可用的服务仓。
+
 ## AI 如何使用本项目
 
 1. **开工前**：读 `AGENTS.md` + `loop/README.md`；新 clone 首个会话自动运行 `scripts/install-hooks.sh`，

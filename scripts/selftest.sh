@@ -14,6 +14,7 @@ bad() { echo "FAIL: $1"; fail=$((fail+1)); }
 "$ROOT/scripts/new-project.sh" demo "$WORK/demo-control-plane" >/dev/null
 [ -f "$WORK/demo-control-plane/loop/04-build/services.json" ] && ok "new-project creates control-plane repo" || bad "new-project"
 [ -f "$WORK/demo-control-plane/scripts/analyze-reports.sh" ] && ok "control-plane repo is self-contained" || bad "self-contained"
+[ -f "$WORK/demo-control-plane/scripts/signoff.py" ] && ok "control-plane ships the sign-off web tool" || bad "signoff tool"
 ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "fresh control-plane repo validates (empty registry, no reports)" || bad "validate empty project"
 [ -f "$WORK/demo-control-plane/.githooks/pre-commit" ] && [ -f "$WORK/demo-control-plane/hooks/no-secrets.sh" ] \
   && ok "control-plane repo ships the git hooks" || bad "control-plane hooks shipped"
