@@ -6,7 +6,8 @@ set -euo pipefail
 MGMT="${1:-}"; SVC="${2:-}"
 [ -n "$MGMT" ] && [ -n "$SVC" ] && [ -d "$SVC" ] || {
   echo "Usage: $0 <management-repo> <service-repo>" >&2; exit 1; }
-PACK="$(cd "$MGMT" && pwd)/knowledge/pack.json"
+MGMT_ABS="$(cd "$MGMT" && pwd)"
+PACK="$MGMT_ABS/knowledge/pack.json"
 [ -f "$PACK" ] || { echo "ERROR: missing $PACK" >&2; exit 1; }
 [ -f "$SVC/service.json" ] || { echo "ERROR: $SVC is not a service repo (no service.json)" >&2; exit 1; }
 
@@ -19,6 +20,20 @@ mv "$SVC/service.json.tmp" "$SVC/service.json"
 if [ -f "$SVC/.sdlc/config.json" ]; then
   jq --arg v "$VER" '.cognitionPack.version = $v' "$SVC/.sdlc/config.json" > "$SVC/.sdlc/config.json.tmp"
   mv "$SVC/.sdlc/config.json.tmp" "$SVC/.sdlc/config.json"
+fi
+
+# The registry records what each service has actually adopted (0.0.0 = never synced).
+# Distribution is the only moment that changes, so keep the entry in step here;
+# validate-project.sh fails when the registry and a reachable local clone drift apart.
+REG="$MGMT_ABS/loop/04-build/services.json"
+SVC_NAME="$(jq -r '.name // empty' "$SVC/service.json")"
+if [ -f "$REG" ] && [ -n "$SVC_NAME" ] \
+   && jq -e --arg n "$SVC_NAME" '[.services[]|select(.name==$n)]|length>0' "$REG" >/dev/null 2>&1; then
+  jq --arg n "$SVC_NAME" --arg v "$VER" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '(.services[]|select(.name==$n)) |= (.cognitionPack.version=$v
+      | del(.cognitionPack.pendingVersion, .cognitionPack.pendingPr) | .updatedAt=$at)' \
+    "$REG" > "$REG.tmp" && mv "$REG.tmp" "$REG"
+  echo "registry: $SVC_NAME -> cognition pack v$VER"
 fi
 
 # Surface the signed cognition where agents actually read it: CLAUDE.md/AGENTS.md
@@ -46,6 +61,8 @@ block = open(block_path, encoding="utf-8").read()
 pattern = re.compile(r"<!-- BEGIN COGNITION PACK.*?<!-- END COGNITION PACK -->", re.S)
 if pattern.search(text):
     text = pattern.sub(lambda _m: block, text)
+    # Keep re-renders byte-identical when the block sits at EOF.
+    text = re.sub(r"(<!-- END COGNITION PACK -->)\s*$", r"\1\n", text)
 else:
     text = (text.rstrip() + "\n\n" + block) if text.strip() else block
 if not text.endswith("\n"):

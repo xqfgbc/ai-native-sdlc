@@ -215,9 +215,21 @@ if [ -n "$prop" ]; then
   ( cd "$WORK/demo-control-plane" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
   [ -f "$WORK/demo-order-service-management/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
   grep -q "$prop" "$WORK/demo-order-service-management/CLAUDE.md" && ok "sync renders active cognition into CLAUDE.md" || bad "cognition block"
+  [ "$(jq -r '.services[]|select(.name=="order-service")|.cognitionPack.version' "$WORK/demo-control-plane/loop/04-build/services.json")" = "$ver" ] \
+    && ok "sync updates the registry cognition version" || bad "registry cognition version"
   hook_out="$( cd "$WORK/demo-order-service-management" && bash hooks/cognition-context.sh 2>&1 )"
   printf '%s' "$hook_out" | grep -q "$prop" \
     && ok "session hook surfaces active cognition" || { echo "  hook: $hook_out"; bad "cognition hook"; }
+  # Registry/local-clone drift must be visible to the validator, not silently tolerated.
+  REG_JSON="$WORK/demo-control-plane/loop/04-build/services.json"
+  cp "$REG_JSON" "$WORK/reg.bak"
+  jq '(.services[]|select(.name=="order-service")|.cognitionPack.version)="0.0.0"' "$REG_JSON" > "$WORK/reg.tmp" && mv "$WORK/reg.tmp" "$REG_JSON"
+  if ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . ) >/dev/null 2>&1; then
+    bad "validate detects registry/local cognition drift"
+  else
+    ok "validate detects registry/local cognition drift"
+  fi
+  cp "$WORK/reg.bak" "$REG_JSON"
 else
   bad "no proposal to promote"
 fi

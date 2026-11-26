@@ -42,6 +42,10 @@ bash scripts/cognition.sh context
 
 deterministic 条目由 hook/ArchUnit/lint/CI 强制，advisory 条目靠注入与评审执行。
 
+`loop/04-build/services.json` 的 `cognitionPack.version` 记录服务**实际采用**的版本（`0.0.0` = 尚未下发）；
+`sync-cognition.sh` 下发时同步更新，远端 PR 流程先记为 `pendingVersion`/`pendingPr`；
+`validate-project.sh` 在本地能定位到服务仓时校验注册表与 pin 版本是否漂移。
+
 ### 债务与复盘
 
 债务表在 `loop/07-maintain/debt/debt.json`，覆盖 intent/design/build/test/deploy/ops/security：

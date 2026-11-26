@@ -14,7 +14,8 @@ MGMT="${1:-}"; REPO="${2:-}"; DRY=0
 [ "${3:-}" = "--dry-run" ] && DRY=1
 [ -n "$MGMT" ] && [ -n "$REPO" ] || { echo "Usage: $0 <management-repo> <org/repo> [--dry-run]" >&2; exit 1; }
 [ -f "$MGMT/knowledge/pack.json" ] || { echo "ERROR: missing $MGMT/knowledge/pack.json" >&2; exit 1; }
-PACK="$(cd "$MGMT" && pwd)/knowledge/pack.json"
+MGMT_ABS="$(cd "$MGMT" && pwd)"
+PACK="$MGMT_ABS/knowledge/pack.json"
 VER="$(jq -r '.metadata.version' "$PACK")"
 BRANCH="sync/cognition-pack-v${VER}"
 TITLE="chore(cognition): adopt pack v${VER}"
@@ -81,12 +82,38 @@ fi
 
 SVC="$TMP/svc"
 [ -f "$SVC/service.json" ] || { echo "ERROR: $REPO is not a service repo (no service.json)" >&2; exit 1; }
+SVC_NAME="$(jq -r '.name // empty' "$SVC/service.json")"
+
+# Registry bookkeeping: the pinned version only becomes the adopted one once the PR
+# merges, so record it as pending until then (validate-project.sh checks drift on
+# local clones only). Best effort: silently skip when the service is unregistered.
+REG="$MGMT_ABS/loop/04-build/services.json"
+registry_set() { # adopted|pending <version> [pr-url]
+  local mode="$1" v="$2" pr="${3:-}" at
+  [ -f "$REG" ] && [ -n "$SVC_NAME" ] || return 0
+  jq -e --arg n "$SVC_NAME" '[.services[]|select(.name==$n)]|length>0' "$REG" >/dev/null 2>&1 || return 0
+  at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [ "$mode" = "adopted" ]; then
+    jq --arg n "$SVC_NAME" --arg v "$v" --arg at "$at" \
+      '(.services[]|select(.name==$n)) |= (.cognitionPack.version=$v
+        | del(.cognitionPack.pendingVersion, .cognitionPack.pendingPr) | .updatedAt=$at)' \
+      "$REG" > "$REG.tmp" && mv "$REG.tmp" "$REG"
+  else
+    jq --arg n "$SVC_NAME" --arg v "$v" --arg pr "$pr" --arg at "$at" \
+      '(.services[]|select(.name==$n)) |= (.cognitionPack.pendingVersion=$v
+        | .cognitionPack.pendingPr=$pr | .updatedAt=$at)' \
+      "$REG" > "$REG.tmp" && mv "$REG.tmp" "$REG"
+  fi
+  echo "registry: $SVC_NAME $mode cognition pack v$v${pr:+ ($pr)}"
+}
+
 mkdir -p "$SVC/.sdlc"
 cp "$PACK" "$SVC/.sdlc/cognition-pack.json"
 tmp="$(mktemp)"; jq --arg v "$VER" '.cognitionPack.version = $v' "$SVC/service.json" > "$tmp" && mv "$tmp" "$SVC/service.json"
 
 cd "$SVC"
 if [ -z "$(git status --porcelain)" ]; then
+  registry_set adopted "$VER"
   echo "sync-remote: $REPO already at cognition pack v$VER"
   exit 0
 fi
@@ -105,4 +132,5 @@ else
     -d "$(jq -n --arg t "$TITLE" --arg h "$BRANCH" --arg b "$BASE" --arg body "$BODY" \
       '{title:$t, head:$h, base:$b, body:$body}')" | jq -r '.html_url // empty')"
 fi
+registry_set pending "$VER" "${PR_URL:-}"
 echo "sync-remote: ${PR_URL:-pushed branch $BRANCH (PR creation returned no URL)}"

@@ -23,6 +23,36 @@ if [ ! -f "$PACK" ]; then fail_msg "missing $PACK"; else
     || fail_msg "pack.json invalid"
 fi
 
+# 2b. cognition adoption consistency
+#     services.json.cognitionPack.version is the version the service actually adopted
+#     (0.0.0 = never synced). sync-cognition.sh updates it; fail on registry/pack or
+#     registry/local-clone drift so a stale entry cannot look like a delivered rule.
+if [ -f "$REG" ] && [ -f "$PACK" ]; then
+  PACK_VER="$(jq -r '.metadata.version // empty' "$PACK")"
+  if [ -n "$PACK_VER" ]; then
+    while IFS=$'\t' read -r svc ver; do
+      [ -n "$svc" ] || continue
+      highest="$(printf '%s\n%s\n' "$ver" "$PACK_VER" | sort -V | tail -1)"
+      if [ "$highest" = "$ver" ] && [ "$ver" != "$PACK_VER" ]; then
+        fail_msg "services.json: $svc records pack v$ver but the control plane is at v$PACK_VER"
+      fi
+
+      repo="$(jq -r --arg n "$svc" '.services[]|select(.name==$n)|.repo' "$REG")"
+      local_dir=""
+      [ -d "$repo" ] && [ -f "$repo/service.json" ] && local_dir="$repo"
+      if [ -z "$local_dir" ]; then
+        sibling="$(dirname "$(pwd)")/${repo##*/}"
+        [ -f "$sibling/service.json" ] && local_dir="$sibling"
+      fi
+      [ -n "$local_dir" ] || continue
+      pinned="$(jq -r '.cognitionPack.version // empty' "$local_dir/service.json")"
+      if [ -n "$pinned" ] && [ "$pinned" != "$ver" ]; then
+        fail_msg "services.json: $svc records pack v$ver but $local_dir pins v$pinned (re-run sync-cognition.sh)"
+      fi
+    done <<< "$(jq -r '.services[]? | select(.cognitionPack.version? != null) | "\(.name)\t\(.cognitionPack.version)"' "$REG" 2>/dev/null || true)"
+  fi
+fi
+
 # 3. execution reports
 REPORTS="$(find execution -path '*/reports/*.json' -type f 2>/dev/null || true)"
 for f in $REPORTS; do
