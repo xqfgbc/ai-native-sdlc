@@ -14,15 +14,22 @@ PROP="knowledge/proposals/${ID}.json"
 [ -f knowledge/pack.json ] || { echo "ERROR: missing knowledge/pack.json" >&2; exit 1; }
 
 TYPE="$(jq -r .type "$PROP")"
+case "$TYPE" in
+  constraint) TYPE_DIR="constraints" ;;
+  skill) TYPE_DIR="skills" ;;
+  lesson) TYPE_DIR="lessons" ;;
+  context) TYPE_DIR="context" ;;
+  *) TYPE_DIR="${TYPE}s" ;;
+esac
 TITLE="$(jq -r .title "$PROP")"
 STMT="$(jq -r .statement "$PROP")"
 
 # Append as an active item to the pack.
-jq --arg id "$ID" --arg type "$TYPE" --arg title "$TITLE" --arg stmt "$STMT" --arg owner "$OWNER" --arg enf "$ENFORCEMENT" '
+jq --arg id "$ID" --arg type "$TYPE" --arg dir "$TYPE_DIR" --arg title "$TITLE" --arg stmt "$STMT" --arg owner "$OWNER" --arg enf "$ENFORCEMENT" '
   .items += [{
     id: $id, type: $type, scope: "project", title: $title, statement: $stmt,
     owner: $owner, status: "active", enforcement: $enf,
-    provenance: [], path: ("knowledge/" + $type + "/" + $id + ".md")
+    provenance: [], path: ("knowledge/" + $dir + "/" + $id + ".md")
   }]' knowledge/pack.json > knowledge/pack.json.tmp
 
 # Bump patch version (x.y.z -> x.y.(z+1)).
@@ -33,8 +40,8 @@ jq --arg v "$NEW" '.metadata.version = $v' knowledge/pack.json.tmp > knowledge/p
 rm -f knowledge/pack.json.tmp
 
 # Materialize the item and retire the proposal.
-mkdir -p "knowledge/$TYPE"
-jq --arg owner "$OWNER" --arg enf "$ENFORCEMENT" '.status = "active" | .owner = $owner | .enforcement = $enf' "$PROP" > "knowledge/$TYPE/$ID.json"
+mkdir -p "knowledge/$TYPE_DIR"
+jq --arg owner "$OWNER" --arg enf "$ENFORCEMENT" '.status = "active" | .owner = $owner | .enforcement = $enf' "$PROP" > "knowledge/$TYPE_DIR/$ID.json"
 rm -f "$PROP"
 
 # Environment-over-instructions (poteto): deterministic constraints need a guardrail, not prose.
