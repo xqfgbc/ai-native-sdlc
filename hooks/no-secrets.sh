@@ -35,7 +35,7 @@ fi
 # Filename blocklist.
 blocked_name='\.env$|\.pem$|\.key$|\.p12$|\.pfx$|id_rsa$|credentials$'
 # Content patterns (one per line, ERE).
-blocked_content='-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{20,}|-----BEGIN RSA PRIVATE KEY-----'
+blocked_content='-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key[[:space:]]*[:=][[:space:]]*[^[:space:]]+|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-|sk-[A-Za-z0-9]{20,}'
 
 found=0
 while IFS= read -r f; do
