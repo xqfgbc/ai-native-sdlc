@@ -57,6 +57,7 @@ DeepSeek Harness，或任何遵守 `AGENTS.md` 的 agent。它定义你要跑的
 4. 只要会改代码就默认 **plan 模式**；没有接受的 plan 不编辑文件。
 5. 报告完成前跑 **verify-work** 技能，并把命令输出粘进总结。
 6. 按 §6 格式提交产物。
+7. 完成 `todo.md` 条目时，把整条移入 `todo-archive.md`（保留 ID、完成日期、验证证据）；`todo.md` 只保留未完成项。
 
 硬规则（hooks 与 CI 会强制一部分，其余靠你）：
 

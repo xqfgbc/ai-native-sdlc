@@ -2,7 +2,9 @@
 
 > 读者：在本框架仓工作的 AI agent 与人类。
 > 目标：把"验证优先、环境 > 指令"落成可执行门禁，并记录从 sun-life 项目借鉴到的做法与剩余差距。
-> 规则：每条 TODO 有 ID、优先级、现状、要做什么、验收命令。做完把 `[ ]` 改成 `[x]`，并在条目下补一行"验证证据"（命令 + 关键输出）。
+> 规则：每条 TODO 有 ID、优先级、现状、要做什么、验收命令。
+> **归档**：做完的条目**移出本文件**，整条写入 `todo-archive.md`（保留 ID、完成日期、验证证据）。
+> 本文件只保留未完成项，不要用 `[x]` 留在原地。
 > 不要用"再加一段 prompt"解决重复问题：同一规则重复两次 → 落成 hook / lint / ArchUnit / CI。
 
 ---
@@ -16,13 +18,13 @@
 | git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
 | git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
 | git push | `pre-push` | `.githooks/pre-push` | `release*` 直推需走 PR；其余分支（含 main/master）可直推，但必须先通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由；分支规则不可跳过） |
-| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（59 项）、技能/agent 配置评测 | 无（远端权威） |
+| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（78 项）、技能/agent 配置评测 | 无（远端权威） |
 
 `pre-push` 的"本仓验证"按仓类型分派：
 
 - 服务仓：`scripts/app-verify.sh build` + `test` + `lint`（不含需要 Docker 的 itest）
 - 控制平面仓：`scripts/validate-project.sh .`
-- 框架仓：`scripts/selftest.sh`（59 项）
+- 框架仓：`scripts/selftest.sh`（78 项）
 
 安装方式：`core.hooksPath` 是**本地配置**；生成器会写入并在 bootstrap 后启用，新 clone 靠 SessionStart 或 `AGENTS.md` 第 0 步恢复。
 
@@ -122,6 +124,35 @@
 
 结论：sun-life 的"基线→范围→红测→final+digest"模型可在本框架落地；缺的是与 collect/review 的绑定和
 把原型接进 hook。原型状态目录 `.sdlc/gate/`（gitignored），不参与提交。
+
+### 4.1 实施条件评估（2026-11-27）
+
+判定口径：**可实施** = 目标/验收明确、无未决决策、无外部阻塞；
+**有条件** = 需先定一个约定/格式或依赖另一条 TODO；**暂不具备** = 依赖外部条件或研究结论。
+
+| TODO | 状态 | 前置条件 / 依赖 | 备注 |
+|---|---|---|---|
+| 01 范围白名单 | ⚠️ 有条件 | 先定清单格式（`.sdlc/change/<id>.json` vs commit trailer）与"未声明时不拦"的兼容策略 | `gate.sh scope` 原型仅在 speaker，未进框架 |
+| 02 验证报告 + 哈希 | ⚠️ 有条件 | 先定 `.sdlc/verify/<sha>.json` schema 与 collect facts 字段（涉及 schema 版本） | 原型 `gate.sh final/verify` 仅在 speaker |
+| 03 红测门禁 | ⚠️ 有条件 | 先定与 `CLAUDE_FIX_TASK` 的开关绑定与误报处理 | 原型 `gate.sh red` 仅在 speaker |
+| 04 增量验证 + lint 基线 | ⚠️ 有条件 | 需设计 Gradle 变更→测试映射、基线存储与行号归一化 | 无原型，工作量最大 |
+| 05 审查 PASS 绑定 | ⚠️ 有条件 | 依赖 02 的 SHA 绑定；需 owner 先定义高风险路径与 `review.md` 格式 | |
+| 06 bug-commit 范围 | ⚠️ 有条件 | 与 01 的清单机制保持一致 | 实现本身简单 |
+| 07 存量仓同步护栏 | ✅ 可实施 | 无 | 建议优先：hooks/scripts 目前仍靠手工同步 |
+| 08 push 审批技术化 | ⛔ 暂不具备 | 需先调研各 agent 运行时的可识别信号；禁止启发式 | 调研完成前保持文档约定 |
+| 09 SES 服务仓 CI | ⚠️ 有条件 | 外部：Actions secrets、分支保护、Testcontainers 运行环境 | 需仓库管理员操作，AI 只能提交 workflow |
+| 10 managementRepo 解析 | ✅ 可实施 | 无 | 建议优先：绝对路径换机器即失效 |
+| 11 采集/上传分离 + 补传 | ⚠️ 有条件 | 依赖 10；需扩展 `.sdlc/config.json` / `sync/state.json` 字段 | 紧随 10 |
+| 12 upload-report 基线分支 | ✅ 可实施 | 无 | 改动小，可先做 |
+| 13 README 独立开发小节 | ⛔ 暂不具备 | 显式依赖 10、11 落地 | 不承诺尚未实现的命令 |
+
+**全局前置条件**（每条都适用）：
+
+1. 按 §4 要求先走 `loop/01-intent → 02-spec → 03-plan`，plan 写明改动文件与验证命令；
+2. 新增门禁必须带 selftest 用例（当前基线 78 项，改完同步 §1 计数）；
+3. 完成后按文件头的归档规则移入 `todo-archive.md`。
+
+**建议顺序**：12 → 10 → 07 → 11 → 01 → 03 → 02 → 06 → 05 → 04；08/09/13 等条件满足再启动。
 
 ### [ ] TODO-01（P1）变更范围白名单（scope guard）
 
@@ -253,7 +284,8 @@
    ./scripts/validate-skills.sh      # OK
    bash -n scripts/*.sh hooks/*.sh   # 语法
    ```
-5. 更新本文件：`[ ]` → `[x]`，补"验证证据"；同步所有文档里的自检计数。
+5. 完成条目：把整条从本文件移入 `todo-archive.md`（保留 ID、完成日期、验证证据）；`todo.md` 只保留未完成项；
+   同步所有文档里的自检计数。
 6. 提交信息遵循 `AGENTS.md §6`；**不要 push**，等人类确认。
 
 ---
@@ -284,3 +316,5 @@ git checkout main && git push gate-test main                 # 应被拦
 - 2026-11-26：记录“只 clone 服务仓（无 control-plane）”的降级行为（§4.0），新增 TODO-10～13：
   managementRepo 解析与显式失败、采集位/上传位分离 + 本地补传、upload-report 基线分支、README 独立开发小节；
   并按现状更新 TODO-09（SES 仓已有远端、仍无验证 CI）。
+- 2026-11-27：新增 §4.1 实施条件评估（可实施/有条件/暂不具备 + 建议顺序）；完成条目改为归档到
+  `todo-archive.md`，本文件不再保留已完成项；selftest 基线更新为 78 项。

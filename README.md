@@ -55,7 +55,8 @@ bash scripts/analyze-reports.sh .
 
 ### 2.1 AI 如何使用本仓库
 
-- 先读 `AGENTS.md`（治理指令）和 `CLAUDE.md`（快速参考）；门禁现状与改进方向见 `todo.md`。
+- 先读 `AGENTS.md`（治理指令）和 `CLAUDE.md`（快速参考）；门禁现状与改进方向见 `todo.md`，
+  已完成项在 `todo-archive.md`（`todo.md` 只保留未完成项）。
 - 新 clone 的首个 Claude Code 会话会自动运行 `scripts/install-hooks.sh`；其他 agent 按 `AGENTS.md`
   会话协议第 0 步执行一次（幂等）。
 - 生成项目/服务仓用 `scripts/new-*.sh`，不要手写模块；仓库命名规则由生成器强制。
