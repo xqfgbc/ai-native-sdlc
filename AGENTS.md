@@ -153,6 +153,7 @@ intent/<YYYY-MM-DD>-<slug>/
 | `implementation-plan` | 阶段 3a（plan 模式） | `intent/<folder>/plan.md` |
 | `implement-change` | 阶段 3b | 按 plan 工作项的 commit |
 | `scaffold-microservice` | 阶段 3c | 新服务仓 + 登记 `services.json` |
+| `commit-conventions` | 每次 commit 前 | `[姓名] #卡号 类型: 概述` 合规的 subject |
 | `verify-work` | 每个工作项后 | 粘贴的 build/test/lint/itest（`app-verify.sh`） |
 | `pr-review` | 阶段 5 | PR 上的 tagged findings 报告 |
 | `review-triage` | 处理评审意见 | 接受/部分/拒绝/延后，均给理由 |

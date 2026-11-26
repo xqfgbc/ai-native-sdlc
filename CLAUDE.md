@@ -17,8 +17,8 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 
 ## 框架仓验证（根目录没有 Gradle 工程）
 
-- `bash scripts/selftest.sh` —— 应 **64 项全绿**
-- `./scripts/validate-skills.sh` —— 应 **OK（19 skills / 8 agents）**
+- `bash scripts/selftest.sh` —— 应 **66 项全绿**
+- `./scripts/validate-skills.sh` —— 应 **OK（20 skills / 8 agents）**
 - `bash -n scripts/*.sh` —— shell 语法检查
 
 ## 在生成的服务仓里验证
@@ -70,6 +70,8 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 - 不要绕 BOM 加依赖（要加就在 PR 说明）
 - 不要用 Hystrix；用 Resilience4j
 - 不要硬编码 secrets，或写进提交的 `application.yml`
+- 提交信息：`[<姓名>] #<卡号> <类型>: <概述>`（无卡号 `#N/A`，AI 生成用 `[AI-Agent]`）；
+  `commit-guard`（执行前）与 `commit-msg`（提交时）都会拦不合规消息
 - 不要加 Eureka 或 Boot 3 的 starter 名
 - Spring 坑：field `@Autowired`、private/自调用 `@Transactional`、返回 JPA 实体、N+1、
   `open-in-view: true`、生产 `ddl-auto: update`、无界 `findAll()`、缺 `@Valid`、无超时出站调用

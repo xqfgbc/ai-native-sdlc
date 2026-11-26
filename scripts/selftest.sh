@@ -104,6 +104,13 @@ if ( cd "$WORK/demo-order-service-management" && bash .githooks/commit-msg "$WOR
 else
   ok "commit-msg rejects the legacy type(scope) format"
 fi
+if printf '{"tool_input":{"command":"git commit -m \\"bad message\\""}}' | bash "$ROOT/hooks/commit-guard.sh" >/dev/null 2>&1; then
+  bad "commit-guard blocks a bad subject before execution"
+else
+  ok "commit-guard blocks a bad subject before execution"
+fi
+printf '{"tool_input":{"command":"git commit -m \\"[AI-Agent] #N/A feat: ok\\""}}' | bash "$ROOT/hooks/commit-guard.sh" >/dev/null 2>&1 \
+  && ok "commit-guard allows a conforming subject" || bad "commit-guard allows a conforming subject"
 # Branch policy: release* requires a PR; every other branch may be pushed directly.
 mkdir -p "$WORK/gate-repo/.githooks"
 cp "$ROOT/.githooks/pre-push" "$WORK/gate-repo/.githooks/pre-push"

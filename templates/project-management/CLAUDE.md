@@ -15,3 +15,4 @@
 - `execution/` 只追加、不手改（采集器写入）。
 - `knowledge/pack.json` 的 active 条目只能人工签核后更新；AI 只写 `knowledge/proposals/`。
 - 门禁：constitution/intent/spec/plan/build/test/deploy/maintain 各自有人类 owner。
+- 提交信息：`[<姓名>] #<卡号> <类型>: <概述>`；无卡号 `#N/A`；AI 生成用 `[AI-Agent]`。

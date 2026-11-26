@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "hooks/production-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": "hooks/commit-guard.sh"
           }
         ]
       },
