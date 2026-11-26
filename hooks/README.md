@@ -20,6 +20,7 @@ SessionStart hook 自动执行，其他 agent 见 `AGENTS.md` 会话协议第 0 
 | `spring-guard.sh` | 拦截 Boot 4 之前的 API + 不安全 JPA 配置 | git + PreToolUse |
 | `production-gate.sh` | 无 `RELEASE_APPROVAL` 时拦截生产部署 | PreToolUse |
 | `test-freeze.sh` | `CLAUDE_FIX_TASK=1` 期间拦截测试编辑 | PreToolUse |
+| `session-log-guard.sh` | 会话有实质提交但没写 `sdlc/session-log/` 时阻止结束（一次） | Stop |
 
 这些是"建议性技能"背后的确定性层（见 `AGENTS.md` §1）：技能让违规变少，hook 让违规不可能。
 

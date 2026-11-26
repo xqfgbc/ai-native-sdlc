@@ -8,7 +8,7 @@
 ## 会话协议
 
 > 会话开始先运行 `bash scripts/install-hooks.sh`（幂等，启用 `.githooks`；Claude Code 会自动执行）。
-每次会话结束写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`：人的指令、AI 实际改动、纠正、规则缺口、未决问题。
+每次会话结束写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`：人的指令、AI 实际改动、纠正、规则缺口、未决问题。Stop hook `session-log-guard.sh` 会在有实质提交却没写日志时阻止结束。
 
 ## 采集与上传
 commit 触发 `.sdlc/collect.sh`（增量 facts + AI 候选认知）→ 上传管理仓。

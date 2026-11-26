@@ -18,6 +18,7 @@
 - 未决问题
 
 > 采集器会读取 session-log，生成 `candidateKnowledge`（带 evidenceRef）。没有 session-log 的非平凡改动会被判 `needs_review`。
+> Stop hook `session-log-guard.sh` 会在有实质提交却没写日志时阻止会话结束。
 
 ## 3. 采集与上传
 - commit 触发 `.sdlc/collect.sh`：增量采集（上次 sha → HEAD）→ `sync/reports/<toSha>.json` → 上传管理仓。

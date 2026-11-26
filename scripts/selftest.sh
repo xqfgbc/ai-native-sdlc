@@ -171,6 +171,15 @@ no_learn_report="$(find "$WORK/demo-control-plane/execution" -name "$no_learn_sh
 [ -n "$no_learn_report" ] && [ "$(jq -r '.spec.stage' "$no_learn_report")" = "maintain" ] \
   && [ "$(jq '.candidateKnowledge|length' "$no_learn_report")" = "0" ] \
   && ok "commits without [learn] produce no candidate" || bad "candidate filter (no [learn])"
+# Session-log guard (Stop hook): a work commit after the last log blocks once.
+guard_rc=0
+( cd "$WORK/demo-order-service-management" \
+  && printf '{"stop_hook_active":false}\n' | CLAUDE_PROJECT_DIR="$PWD" bash hooks/session-log-guard.sh >/dev/null 2>&1 ) || guard_rc=$?
+guard_active_rc=0
+( cd "$WORK/demo-order-service-management" \
+  && printf '{"stop_hook_active":true}\n' | CLAUDE_PROJECT_DIR="$PWD" bash hooks/session-log-guard.sh >/dev/null 2>&1 ) || guard_active_rc=$?
+[ "$guard_rc" -eq 2 ] && [ "$guard_active_rc" -eq 0 ] \
+  && ok "session-log guard blocks once when a session left no log" || bad "session-log guard"
 
 # 4. analyze + validate
 ( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )
