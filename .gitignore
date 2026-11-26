@@ -22,6 +22,3 @@ secrets/
 # Local scratch
 *.log
 *.tmp
-
-# Archived legacy (kept locally, not published)
-archive/

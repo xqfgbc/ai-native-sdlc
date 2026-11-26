@@ -38,7 +38,6 @@ config/                                bands.yaml（控制带）
 evals/                                 agent 评测套件
 docs/                                  project-factory / github-automation / 模板 / runbook 等
 research/                              上游研究（playbook、Spring 坑、GitHub 护栏、上游技能）
-archive/                              本地归档（不发布）
 ```
 
 ## 2. 已完成能力（P1–P4）

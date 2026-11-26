@@ -239,7 +239,6 @@ frontend-vue 仓             → Vue 3 + Vite
 | 认知 | proposal → 人工签核 → pack 版本化 → 下发；`repeat` 蒸馏（D4） |
 | 情报 | `intake/` + `intake-signal.sh`（Slack/Linear/邮件） |
 | 度量 | `wiki/dora.md`（部署频率/变更失败率/lead time/MTTR） |
-| 归档 | 旧单仓原型已移出本仓库（本地 `archive/`，不发布） |
 
 **已验证**：`bash scripts/selftest.sh` → **31/31**；`validate-skills.sh` OK（19 skills / 8 agents）；
 gateway/config-server/business 独立仓 `./gradlew assemble` 通过。
