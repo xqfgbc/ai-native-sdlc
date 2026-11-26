@@ -1,0 +1,189 @@
+# todo.md — 门禁（确定性护栏）现状与改进方向
+
+> 读者：在本框架仓工作的 AI agent 与人类。
+> 目标：把"验证优先、环境 > 指令"落成可执行门禁，并记录从 sun-life 项目借鉴到的做法与剩余差距。
+> 规则：每条 TODO 有 ID、优先级、现状、要做什么、验收命令。做完把 `[ ]` 改成 `[x]`，并在条目下补一行"验证证据"（命令 + 关键输出）。
+> 不要用"再加一段 prompt"解决重复问题：同一规则重复两次 → 落成 hook / lint / ArchUnit / CI。
+
+---
+
+## 1. 现在已生效的门禁（事实清单）
+
+| 触发时机 | 门禁 | 实现 | 拦住什么 | 绕过方式 |
+|---|---|---|---|---|
+| Claude Code 会话开始 | SessionStart | `.claude/settings.json` → `scripts/install-hooks.sh` | 未启用 `core.hooksPath` 的 clone | 接受 workspace trust 后自动执行 |
+| agent 编辑文件前 | PreToolUse | `hooks/{no-secrets,protect-paths,spring-guard,test-freeze,production-gate}.sh` | 写入 secret、受保护路径、Boot4/JPA 违规、测试冻结期改测试、无授权部署 | 不能绕过（agent 侧） |
+| git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
+| git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
+| git push | `pre-push` | `.githooks/pre-push` | 直推 `main/master/prod/uat`；未通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由） |
+| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（59 项）、技能/agent 配置评测 | 无（远端权威） |
+
+`pre-push` 的"本仓验证"按仓类型分派：
+
+- 服务仓：`scripts/app-verify.sh build` + `test` + `lint`（不含需要 Docker 的 itest）
+- 控制平面仓：`scripts/validate-project.sh .`
+- 框架仓：`scripts/selftest.sh`（59 项）
+
+安装方式：`core.hooksPath` 是**本地配置**；生成器会写入并在 bootstrap 后启用，新 clone 靠 SessionStart 或 `AGENTS.md` 第 0 步恢复。
+
+---
+
+## 2. sun-life 项目的门禁模型（参考实现）
+
+参考文件（在本机 `../sun-life-vibe-coding`，只读借鉴，不要修改）：
+
+- `tools/shared/src/delivery-agent-check.mjs`（`agent-run-check` 实现）
+- `tools/shared/src/delivery-agent-run.mjs`（`report.json` 如何被回写门禁消费）
+- `standards/agent-run.md`（执行与回写契约）
+- `standards/bug-swat.md`（提交范围与"永不 push"规则）
+- `OPERATING_GUIDE.md`（执行者视角的操作序列）
+
+它的核心是**命令 + 产物哈希绑定**，而不是自由文本承诺：
+
+1. 设计提示词（`*-agent-run.md`，正文 v3）按工作项声明：改动清单（文件/symbol）、测试文件 + `bash check` 命令、方法逻辑步骤。
+2. `agent-run-check --start`：记录提示词 SHA-256、Git 基线、未跟踪文件哈希，并跑一遍自检 + lint 存基线（执行前就失败的不算本轮）。
+3. `--red --item N`：**红测门禁**。只允许改测试文件；`bash check` 必须失败，且必须是断言失败——编译错误、找不到模块/symbol、没有测试都不算红（内置关键字识别）。
+4. `--item N`：跑第 N 项测试 + 全部自检；**越界检查**（相对基线的改动必须列在第 1..N 项的改动清单里）；**新增 lint 检查**（与基线比对，行号归一后按多重集比较，只有新增算失败）；结果写 `report.json`。
+5. 最终运行（不带参数）：全量工作项检查 + 越界/lint + `changedDigest`（基线以来所有变更内容的哈希），生成 `report.json` 与结果草稿。
+6. 回写 `completed` 只认 `report.json`：必须是最新 final、`promptSha256` 一致、越界/lint 通过、无失败测试；final 之后代码再改（digest 变化）必须重跑。
+7. 代码审查 PASS 绑定最新一轮 results 的 SHA-256；`validate` 对"completed 但没有当前 PASS"报错；同一轮结果只能有一条 PASS/FAIL，最多 5 次 FAIL。
+8. 提交纪律：提交只含声明的目录（`bug-commit`），消息 `[<user>] #<BUG-ID> <动作>：<标题>`；**执行 agent 永不 push**，提交后询问人类，人类确认才推。
+
+可直接迁移的原则：
+
+- 门禁读**记录下来的结果**（report/hash），不重新计算、不接受口头声明。
+- 校验"变了什么"（范围）与"有没有变坏"（新增 lint/失败测试），而不只是"现在绿不绿"。
+- 测试先行（red → green）是确定性门禁，不是建议。
+- 报告与提示词/代码版本绑定，版本漂移自动失效。
+
+---
+
+## 3. 差距（我们 vs sun-life）
+
+| 能力 | sun-life | 我们 | 影响 |
+|---|---|---|---|
+| 提交信息规范 | 有（`[id] #BUG-ID`） | ✅ `commit-msg`（`type(scope): subject`） | 已对齐 |
+| 推送前验证 | final check + 报告 | ✅ `pre-push` 跑整仓验证（粗粒度） | 已对齐，但慢且无增量 |
+| 测试先行（red） | `--red` 强制 | ❌（仅 `test-freeze` 阻止修 bug 时改测试） | 无法证明"先有失败测试" |
+| 改动范围白名单 | 按工作项改动清单 | ❌ | 顺手改无关文件无法自动发现 |
+| 新增 lint 才算失败 | 有基线 diff | ❌（整仓"现在是否绿"） | 历史问题会背锅，降低门禁可用性 |
+| final 报告与哈希绑定 | `report.json` + digest | ❌（collect 有报告哈希链，但不在提交/推送口） | "跑过了"不可审计 |
+| 审查 PASS 绑定结果 | `code-review` | ❌ | 高风险变更缺人工/强模型证据 |
+| 提交范围限制 | `bug-commit` | ❌ | 一次提交可混入多个关注点 |
+| agent 不 push | 流程强制 + 提问人类 | 仅 `AGENTS.md` 文字约定 | 技术上仍可自行 push |
+| CI 权威镜像 | 有 | ✅（框架仓）；SES 服务仓 ❌ 无远端/CI | 本地门禁是唯一防线 |
+
+---
+
+## 4. 改进方向（按优先级；做之前先在 `loop/` 走 intent→spec→plan）
+
+> 选型约束（所有 TODO 都必须满足）：
+> - `pre-commit` 不允许依赖网络/Docker，单次耗时 < 2s；重检查放 `pre-push`。
+> - 新增门禁必须有 selftest 用例（生成仓库 → 触发 → 断言拦截/放行），并同步 README/CLAUDE/DELIVERY/DESIGN/HANDOVER 的自检计数。
+> - 无法确定性判断的规则不要写成门禁，写成 skill/AGENTS 指引。
+> - 生成器改动必须同时更新 `templates/` 与存量仓同步方式（见 TODO-07）。
+
+### [ ] TODO-01（P1）变更范围白名单（scope guard）
+
+- 现状：`pre-commit` 只看内容违规，不看"这次允许改哪些文件"。
+- 建议最小实现：每次变更在 `.sdlc/change/<id>.json`（或 commit trailer `Scope: a,b,c`）声明允许改动的路径 + 验证命令；`pre-commit` 校验 staged 文件 ⊆（声明路径 ∪ 测试 ∪ 文档）；`pre-push` 复用同一清单。
+- 验收：
+  - 生成的服务仓里，声明 `src/main/java/**` 后，提交 `src/main/java/...` 通过；
+  - 同一提交夹带 `docs/other.md`（未声明）→ 被拦，错误信息指出文件与清单；
+  - 未提供清单时行为与现在一致（向后兼容，默认不拦）；
+  - selftest 增 3 条用例；文档说明清单格式与示例。
+- 风险：清单与真实意图脱节 → 清单必须由 plan 生成，或在 PR 模板里显式列出。
+
+### [ ] TODO-02（P1）验证报告与哈希绑定（verify report）
+
+- 现状：`pre-push` 跑完验证只打印结果，不落盘、不可审计。
+- 建议：`pre-push` 成功后在 `.sdlc/verify/<HEAD>.json` 记录：`commitSha`、命令、退出码、耗时、环境（JDK/Gradle 版本）、输出摘要哈希；`collect.sh` 把它带进 execution report 的 facts（新增字段需同步 schema）。
+- 验收：
+  - 推送 feature 分支后存在报告文件，字段符合 schema；
+  - 改动代码后未重跑验证，报告与 HEAD 不匹配时 `collect.sh` 标 `needs_review`；
+  - `validate-project.sh` 能校验报告完整性；selftest 覆盖。
+- 备注：这是 sun-life `report.json` 的最小对等物；先服务仓，再控制平面/框架。
+
+### [ ] TODO-03（P2）测试先行门禁（red-first）
+
+- 现状：修 bug 时 `test-freeze` 只阻止改测试，不能证明测试先红。
+- 建议：为服务仓提供 `scripts/red-check.sh`：指定测试类/方法，先跑必须失败（且失败原因是断言），再用 `git` 校验本轮仅改测试文件；接入 `CLAUDE_FIX_TASK=1` 流程与 skill。
+- 验收：
+  - 未先跑 red 就改实现 → `pre-commit` 或 `app-verify` 报错（开关：`SDL_FIX_TASK=1`）；
+  - 编译失败/找不到测试不算红；
+  - selftest 覆盖红/非红两类用例。
+
+### [ ] TODO-04（P2）增量验证 + lint 基线
+
+- 现状：`pre-push` 全仓跑 build+test+lint，慢且会把历史 lint 问题算到本次头上。
+- 建议：只验证变更模块；lint 与上次成功基线比对，只对本轮新增违规失败（行号归一化，避免噪声）。
+- 验收：改动 1 个类时只跑相关测试（Gradle `--tests` / 变更映射）；新增 lint 拦截、既有 lint 放行；耗时对比记录在本文件。
+
+### [ ] TODO-05（P2）代码审查 PASS 绑定（高风险变更）
+
+- 现状：无审查证据链。
+- 建议：高风险路径（鉴权、资金、schema 迁移、跨服务契约、生产配置）要求 PR 附 `review.md`（审查者、结论、绑定 commit SHA）；CI 或 `validate-project` 校验存在且 SHA 匹配。
+- 验收：高风险变更缺审查 → 合并门禁失败；审查记录 SHA 不匹配 → 失败；低风险变更不受影响。
+
+### [ ] TODO-06（P3）提交范围限制（bug-commit 对等物）
+
+- 现状：一次提交可混入多个关注点。
+- 建议：`scripts/bug-commit.sh <bug-dir>` 只允许提交该 bug 相关路径 + 工具重建的索引，并在提交信息里带 `#<BUG-ID>`。
+- 验收：范围外文件被拒；消息格式由 `commit-msg` 校验；selftest 覆盖。
+
+### [ ] TODO-07（P3）存量仓同步护栏
+
+- 现状：`hooks/`、`.githooks/`、`scripts/app-verify.sh` 的修复需要手工同步到已生成的仓（本次 speaker/control-plane 就是手工同步的）。
+- 建议：`scripts/sync-guardrails.sh <control-plane-repo>` 读取 `services.json`，把 `hooks/`、`.githooks/`、`scripts/{app-verify,install-hooks,validate-project}.sh` 同步到各服务仓，并跑 `install-hooks.sh`；默认 dry-run，`--write` 才落盘。
+- 验收：dry-run 列出差异不写；`--write` 后每个仓 `git status` 只显示预期文件；selftest 覆盖。
+
+### [ ] TODO-08（P3）push 审批技术化
+
+- 现状："agent 不得自行 push" 只有文字约定。
+- 建议：研究 agent 运行时可识别的环境变量（Claude Code/Codex/opencode），在 agent 上下文中要求 `SDL_PUSH_APPROVED=1` 才放行；人类终端保持原行为。不可识别时保持文档约定，不要用不可靠的启发式。
+- 验收：agent 环境无审批 → 被拦且提示"询问人类"；人类终端正常推送；两种环境的 selftest（用 env 模拟）。
+
+### [ ] TODO-09（P3）SES 服务仓 CI 镜像
+
+- 现状：`ses-*` 仓无 remote、无 CI，本地 hook 是唯一防线。
+- 建议：仓推到远端后加 GitHub Actions：`app-verify all`（含 Testcontainers）+ `validate-skills`，作为权威门禁；本地 hook 只做快速失败。
+- 验收：PR 上 CI 必跑且失败阻断合并；本地与 CI 的命令一致（同一脚本入口）。
+
+---
+
+## 5. AI 接手方式（照做即可）
+
+1. 读本文件 + `AGENTS.md` + `CLAUDE.md`；确认要做的 TODO 未完成。
+2. 按框架规则走 `loop/01-intent` → `02-spec` → `03-plan`（小改动可合并，但 plan 必须写清改动文件与验证命令）。
+3. 实现时先加 selftest 用例（失败）→ 再实现 → 跑到全绿。
+4. 必跑：
+   ```bash
+   bash scripts/selftest.sh          # 全绿，计数与文档一致
+   ./scripts/validate-skills.sh      # OK
+   bash -n scripts/*.sh hooks/*.sh   # 语法
+   ```
+5. 更新本文件：`[ ]` → `[x]`，补"验证证据"；同步所有文档里的自检计数。
+6. 提交信息遵循 `AGENTS.md §6`；**不要 push**，等人类确认。
+
+---
+
+## 6. 验收命令（通用）
+
+```bash
+# 门禁自身
+bash scripts/selftest.sh
+./scripts/validate-skills.sh
+
+# 真实 push 门禁（本地裸仓，不触网）
+git init -q --bare /tmp/gate.git
+git remote add gate-test /tmp/gate.git
+git checkout -b test/gate && git push gate-test test/gate    # 应通过（先跑验证）
+git checkout main && git push gate-test main                 # 应被拦
+```
+
+---
+
+## 7. 变更记录
+
+- 2026-11-26：新增 `commit-msg`、`pre-push` 验证；`no-secrets` 修复（内容检测与 stdin 挂起）；业务模板 `ArchitectureTest` 修复 checkstyle；selftest 59 项。
+- 2026-11-26：本文件建立，记录 sun-life 门禁模型与 9 项改进方向。
