@@ -22,3 +22,7 @@ secrets/
 # Local scratch
 *.log
 *.tmp
+
+# Python bytecode
+__pycache__/
+*.pyc
