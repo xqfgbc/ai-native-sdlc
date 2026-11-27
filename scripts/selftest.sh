@@ -254,6 +254,66 @@ else
   bad "no proposal to promote"
 fi
 
+# 5b. upload-report base detection (TODO-12)
+printf '{"apiVersion":"sdlc/v1","kind":"ExecutionReport"}\n' > "$WORK/fake-report.json"
+mkdir -p "$WORK/bin"
+cat > "$WORK/bin/gh" <<'GHEOF'
+#!/usr/bin/env bash
+if [ "$1" = "repo" ] && [ "$2" = "view" ]; then echo master; exit 0; fi
+echo "stub gh: unexpected $*" >&2; exit 1
+GHEOF
+chmod +x "$WORK/bin/gh"
+ur_out="$(GH_TOKEN=dummy PATH="$WORK/bin:$PATH" bash "$ROOT/scripts/upload-report.sh" org/demo "$WORK/fake-report.json" build order-service abc123 --dry-run 2>&1)"
+printf '%s' "$ur_out" | grep -q 'base=master' && ok "upload-report detects the default branch" || bad "upload-report base detection"
+ur_json="$(GH_TOKEN=dummy PATH="$WORK/bin:$PATH" bash "$ROOT/scripts/upload-report.sh" org/demo "$WORK/fake-report.json" build order-service abc123 --base develop --dry-run --json 2>&1)"
+[ "$(printf '%s' "$ur_json" | jq -r .base)" = "develop" ] && ok "upload-report honors --base" || bad "upload-report --base"
+
+# 5c. guardrail sync to existing repos (TODO-07)
+echo "# drift" >> "$WORK/demo-order-service-management/hooks/no-secrets.sh"
+sg_out="$(bash "$ROOT/scripts/sync-guardrails.sh" "$WORK/demo-control-plane" --service order-service 2>&1)"
+printf '%s' "$sg_out" | grep -q 'hooks/no-secrets.sh' && ok "sync-guardrails detects drift" || bad "sync-guardrails dry-run"
+if bash "$ROOT/scripts/sync-guardrails.sh" "$WORK/demo-control-plane" --service order-service --check >/dev/null 2>&1; then
+  bad "sync-guardrails --check fails on drift"
+else
+  ok "sync-guardrails --check fails on drift"
+fi
+bash "$ROOT/scripts/sync-guardrails.sh" "$WORK/demo-control-plane" --service order-service --write >/dev/null 2>&1
+cmp -s "$ROOT/hooks/no-secrets.sh" "$WORK/demo-order-service-management/hooks/no-secrets.sh" \
+  && ok "sync-guardrails --write restores the framework file" || bad "sync-guardrails --write"
+bash "$ROOT/scripts/sync-guardrails.sh" "$WORK/demo-control-plane" --service order-service --check >/dev/null 2>&1 \
+  && ok "sync-guardrails --check passes after --write" || bad "sync-guardrails post-write check"
+
+# 5d. offline collect + replay (TODO-10/11)
+cp -R "$WORK/demo-order-service-management" "$WORK/offline-svc"
+( cd "$WORK/offline-svc" && echo "offline" >> README.md && git add -A \
+  && git commit -q -m "[AI-Agent] #N/A chore: offline collect probe" )
+offline_sha="$(git -C "$WORK/offline-svc" rev-parse HEAD)"
+up_before="$(jq -r '.lastUploadedSha // ""' "$WORK/offline-svc/.sdlc/config.json")"
+off_out="$( cd "$WORK/offline-svc" && SDL_MGMT_REPO="$WORK/no-such-mgmt" bash .sdlc/collect.sh 2>&1 )"
+printf '%s' "$off_out" | grep -q 'management repo not found' && ok "collect warns when the management repo is absent" || bad "collect missing-mgmt warning"
+[ -f "$WORK/offline-svc/sync/reports/$offline_sha.json" ] && ok "offline collect keeps the report locally" || bad "offline report"
+[ "$(jq -r '.lastCollectedSha' "$WORK/offline-svc/.sdlc/config.json")" = "$offline_sha" ] \
+  && ok "offline collect advances only the collect cursor" || bad "offline collect cursor"
+[ "$(jq -r '.lastUploadedSha // ""' "$WORK/offline-svc/.sdlc/config.json")" = "$up_before" ] \
+  && ok "offline collect leaves the upload cursor untouched" || bad "offline upload cursor"
+
+res_sib="$( cd "$WORK/offline-svc" && bash .sdlc/collect.sh --resolve-mgmt 2>&1 )"
+[ "$res_sib" = "$WORK/demo-control-plane" ] && ok "collect resolves the sibling control plane" || { echo "  resolve: $res_sib"; bad "collect sibling resolution"; }
+res_env="$( cd "$WORK/offline-svc" && SDL_MGMT_REPO="$WORK/demo-control-plane" bash .sdlc/collect.sh --resolve-mgmt 2>&1 )"
+[ "$res_env" = "$WORK/demo-control-plane" ] && ok "collect honors SDL_MGMT_REPO" || bad "collect env resolution"
+res_rc=0
+( cd "$WORK/offline-svc" && SDL_MGMT_REPO="$WORK/no-such-mgmt" bash .sdlc/collect.sh --resolve-mgmt ) >/dev/null 2>&1 || res_rc=$?
+[ "$res_rc" -eq 1 ] && ok "collect fails loudly on a missing SDL_MGMT_REPO" || bad "collect missing env"
+
+rp_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/demo-control-plane" 2>&1 )"
+printf '%s' "$rp_out" | grep -q 'uploaded=1' && ok "replay uploads the backlog report" || { echo "  replay: $rp_out"; bad "replay upload"; }
+[ -n "$(find "$WORK/demo-control-plane/execution" -name "$offline_sha.json" | head -1)" ] \
+  && ok "replay lands in the management repo" || bad "replay destination"
+[ "$(jq -r '.lastUploadedSha' "$WORK/offline-svc/.sdlc/config.json")" = "$offline_sha" ] \
+  && ok "replay advances the upload cursor" || bad "replay cursor"
+rp2_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/demo-control-plane" 2>&1 )"
+printf '%s' "$rp2_out" | grep -q 'uploaded=0' && ok "replay is idempotent" || bad "replay idempotent"
+
 # 6. deterministic guard hooks (agent mode works; stdin can never hang them)
 printf 'clean\n' > "$WORK/clean.txt"
 if ns_out="$(printf '{"tool_input":{"file_path":"%s"}}' "$WORK/clean.txt" | "$ROOT/hooks/no-secrets.sh" 2>&1)"; then

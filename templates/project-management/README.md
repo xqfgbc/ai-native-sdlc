@@ -55,6 +55,13 @@ bash scripts/debt.sh due            # 7 天内到期
 bash scripts/debt.sh add --kind tech --title "…" --priority P2 --owner <you> --due YYYY-MM-DD
 ```
 
+存量服务仓的 hooks/scripts 与框架对齐（默认 dry-run，`--write` 落盘，`--check` 供 CI）：
+
+```bash
+bash scripts/sync-guardrails.sh . --source <框架仓> --check
+bash scripts/sync-guardrails.sh . --source <框架仓> --write
+```
+
 AI 预判与人工决定一致率：
 
 ```bash

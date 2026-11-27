@@ -3,7 +3,8 @@
 # collects the delta since lastCollectedSha (deterministic facts), turns [learn] markers
 # into candidate knowledge, writes sync/reports/<toSha>.json, uploads it to the
 # management repo (idempotent on toSha) and advances the hash chain.
-# Usage: bash .sdlc/collect.sh   (or scripts/collect.sh when cwd is the service repo)
+# Usage: bash .sdlc/collect.sh [--resolve-mgmt]
+#   --resolve-mgmt  print the resolved management repo and exit (exit 1 when not found)
 set -euo pipefail
 SVC_DIR="$(pwd)"
 CONFIG="$SVC_DIR/.sdlc/config.json"
@@ -11,8 +12,47 @@ CONFIG="$SVC_DIR/.sdlc/config.json"
 
 SERVICE="$(jq -r .service "$CONFIG")"
 TYPE="$(jq -r .type "$CONFIG")"
-MGMT="$(jq -r .managementRepo "$CONFIG")"
+CFG_MGMT="$(jq -r '.managementRepo // empty' "$CONFIG")"
+PROJECT="$(jq -r '.project // empty' "$CONFIG")"
+if [ -z "$PROJECT" ] && [ -f "$SVC_DIR/service.json" ]; then
+  PROJECT="$(jq -r '.project // empty' "$SVC_DIR/service.json" 2>/dev/null || true)"
+fi
+PARENT="$(cd "$SVC_DIR/.." && pwd)"
+SIBLING=""
+if [ -n "$PROJECT" ]; then SIBLING="$PARENT/$PROJECT-control-plane"; fi
+if [ -z "$SIBLING" ] || [ ! -d "$SIBLING" ]; then
+  shopt -s nullglob
+  cands=("$PARENT"/*-control-plane)
+  shopt -u nullglob
+  if [ "${#cands[@]}" -eq 1 ]; then SIBLING="${cands[0]}"; fi
+fi
+
+# Resolution: SDL_MGMT_REPO (authoritative) -> sibling <project>-control-plane -> config.
+# An explicit but wrong SDL_MGMT_REPO fails loudly instead of falling back, so an
+# offline run can never upload into the wrong project.
+MGMT=""
+if [ -n "${SDL_MGMT_REPO:-}" ]; then
+  MGMT="$SDL_MGMT_REPO"
+  [ -d "$MGMT" ] || echo "collect: SDL_MGMT_REPO points to a missing directory: $MGMT" >&2
+else
+  if [ -n "$SIBLING" ] && [ -d "$SIBLING" ]; then
+    MGMT="$SIBLING"
+  elif [ -n "$CFG_MGMT" ] && [ -d "$CFG_MGMT" ]; then
+    MGMT="$CFG_MGMT"
+  fi
+fi
+
+if [ "${1:-}" = "--resolve-mgmt" ]; then
+  if [ -n "$MGMT" ] && [ -d "$MGMT" ]; then echo "$MGMT"; exit 0; fi
+  echo "collect: management repo not found (SDL_MGMT_REPO=${SDL_MGMT_REPO:-unset} sibling=${SIBLING:-none} config=${CFG_MGMT:-none})" >&2
+  exit 1
+fi
+
 LAST="$(jq -r '.lastCollectedSha // ""' "$CONFIG")"
+LAST_UP="$(jq -r '.lastUploadedSha // ""' "$CONFIG")"
+# Upgrade path for repos created before lastUploadedSha existed: past collects
+# were uploaded, so start the upload cursor at the collect cursor.
+[ -n "$LAST_UP" ] || LAST_UP="$LAST"
 TO="$(git rev-parse HEAD)"
 if [ -n "$LAST" ] && [ "$LAST" = "$TO" ]; then
   echo "collect: no new commits (already at $TO)"; exit 0
@@ -117,7 +157,8 @@ HASH="$(printf '%s' "$REPORT" | (command -v sha256sum >/dev/null && sha256sum ||
 mkdir -p "$SVC_DIR/sync/reports"
 echo "$REPORT" > "$SVC_DIR/sync/reports/$TO.json"
 
-if [ -d "$MGMT" ]; then
+UPLOADED=0
+if [ -n "$MGMT" ] && [ -d "$MGMT" ]; then
   DEST="$MGMT/execution/$STAGE/$SERVICE/reports"
   mkdir -p "$DEST"
   if [ -f "$DEST/$TO.json" ]; then
@@ -126,10 +167,19 @@ if [ -d "$MGMT" ]; then
     cp "$SVC_DIR/sync/reports/$TO.json" "$DEST/$TO.json"
     echo "collect: uploaded $SERVICE $FROM..$TO -> $DEST/$TO.json"
   fi
+  UPLOADED=1
 else
-  echo "collect: remote management repo ($MGMT); report left at sync/reports/$TO.json for scripts/upload-report.sh"
+  if [ -n "${SDL_MGMT_REPO:-}" ]; then
+    echo "collect: management repo not found at $MGMT (SDL_MGMT_REPO); report kept at sync/reports/$TO.json" >&2
+  elif [ -n "$MGMT" ]; then
+    echo "collect: management repo is not a local directory ($MGMT); report kept at sync/reports/$TO.json (use scripts/replay-reports.sh or upload-report.sh)" >&2
+  else
+    echo "collect: management repo not found (SDL_MGMT_REPO=${SDL_MGMT_REPO:-unset} sibling=${SIBLING:-none} config=${CFG_MGMT:-none}); report kept at sync/reports/$TO.json" >&2
+  fi
+  echo "collect: run scripts/replay-reports.sh <management-repo> once it is available" >&2
 fi
 
-jq --arg to "$TO" '.lastCollectedSha=$to' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+if [ "$UPLOADED" = "1" ]; then LAST_UP="$TO"; fi
+jq --arg to "$TO" --arg up "$LAST_UP" '.lastCollectedSha=$to | .lastUploadedSha=$up' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
 jq -n --arg h "$HASH" '{lastHash:$h}' > "$SVC_DIR/sync/state.json"
 echo "collect: review=$REVIEW candidates=$(echo "$CANDIDATES" | jq 'length') prevHash=${PREV_HASH:0:12}"

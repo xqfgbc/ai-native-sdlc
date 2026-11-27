@@ -165,6 +165,9 @@ cp "$ROOT/scripts/debt.sh" "$ROOT/scripts/cognition.sh" "$TARGET/scripts/" 2>/de
 # P2: remote push channel for reports.
 cp "$ROOT/scripts/upload-report.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/upload-report.sh" ] && chmod +x "$TARGET/scripts/upload-report.sh"
+# Local backfill after an offline collect (management repo was absent).
+cp "$ROOT/scripts/replay-reports.sh" "$TARGET/scripts/" 2>/dev/null || true
+[ -f "$TARGET/scripts/replay-reports.sh" ] && chmod +x "$TARGET/scripts/replay-reports.sh"
 # Verification-first: one reusable verification CLI for every agent.
 cp "$ROOT/scripts/app-verify.sh" "$TARGET/scripts/" 2>/dev/null || true
 [ -f "$TARGET/scripts/app-verify.sh" ] && chmod +x "$TARGET/scripts/app-verify.sh"

@@ -18,13 +18,13 @@
 | git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
 | git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
 | git push | `pre-push` | `.githooks/pre-push` | `release*` 直推需走 PR；其余分支（含 main/master）可直推，但必须先通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由；分支规则不可跳过） |
-| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（78 项）、技能/agent 配置评测 | 无（远端权威） |
+| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（95 项）、技能/agent 配置评测 | 无（远端权威） |
 
 `pre-push` 的"本仓验证"按仓类型分派：
 
 - 服务仓：`scripts/app-verify.sh build` + `test` + `lint`（不含需要 Docker 的 itest）
 - 控制平面仓：`scripts/validate-project.sh .`
-- 框架仓：`scripts/selftest.sh`（78 项）
+- 框架仓：`scripts/selftest.sh`（95 项）
 
 安装方式：`core.hooksPath` 是**本地配置**；生成器会写入并在 bootstrap 后启用，新 clone 靠 SessionStart 或 `AGENTS.md` 第 0 步恢复。
 
@@ -109,6 +109,10 @@
 3. `upload-report.sh` 硬编码控制平面默认分支为 `main`（`gh repo clone --branch main`、`--base main`），
    而本项目控制平面默认是 `master` → 配好 token 后远端 PR 仍会失败。
 
+> 2026-11-27：三个坑已修复（TODO-10/11/12 已归档）——managementRepo 按 `SDL_MGMT_REPO` →
+> 同级 `<project>-control-plane` → config 解析；采集位/上传位分离并新增 `replay-reports.sh`；
+> upload-report 自动探测默认分支。§4.0 保留为问题背景。
+
 ### 4.0.1 门禁验证结论（2026-11-26 speaker 实验，原型 `ses-speaker-management/scripts/gate.sh`）
 
 | sun-life 能力 | 本次验证 | 结论 |
@@ -138,21 +142,17 @@
 | 04 增量验证 + lint 基线 | ⚠️ 有条件 | 需设计 Gradle 变更→测试映射、基线存储与行号归一化 | 无原型，工作量最大 |
 | 05 审查 PASS 绑定 | ⚠️ 有条件 | 依赖 02 的 SHA 绑定；需 owner 先定义高风险路径与 `review.md` 格式 | |
 | 06 bug-commit 范围 | ⚠️ 有条件 | 与 01 的清单机制保持一致 | 实现本身简单 |
-| 07 存量仓同步护栏 | ✅ 可实施 | 无 | 建议优先：hooks/scripts 目前仍靠手工同步 |
 | 08 push 审批技术化 | ⛔ 暂不具备 | 需先调研各 agent 运行时的可识别信号；禁止启发式 | 调研完成前保持文档约定 |
 | 09 SES 服务仓 CI | ⚠️ 有条件 | 外部：Actions secrets、分支保护、Testcontainers 运行环境 | 需仓库管理员操作，AI 只能提交 workflow |
-| 10 managementRepo 解析 | ✅ 可实施 | 无 | 建议优先：绝对路径换机器即失效 |
-| 11 采集/上传分离 + 补传 | ⚠️ 有条件 | 依赖 10；需扩展 `.sdlc/config.json` / `sync/state.json` 字段 | 紧随 10 |
-| 12 upload-report 基线分支 | ✅ 可实施 | 无 | 改动小，可先做 |
-| 13 README 独立开发小节 | ⛔ 暂不具备 | 显式依赖 10、11 落地 | 不承诺尚未实现的命令 |
+| 13 README 独立开发小节 | ✅ 可实施 | 依赖已满足（TODO-10/11 已归档） | 用真实命令写单仓降级/补传步骤 |
 
 **全局前置条件**（每条都适用）：
 
 1. 按 §4 要求先走 `loop/01-intent → 02-spec → 03-plan`，plan 写明改动文件与验证命令；
-2. 新增门禁必须带 selftest 用例（当前基线 78 项，改完同步 §1 计数）；
+2. 新增门禁必须带 selftest 用例（当前基线 95 项，改完同步 §1 计数）；
 3. 完成后按文件头的归档规则移入 `todo-archive.md`。
 
-**建议顺序**：12 → 10 → 07 → 11 → 01 → 03 → 02 → 06 → 05 → 04；08/09/13 等条件满足再启动。
+**建议顺序**：01 → 03 → 02 → 06 → 05 → 04；13 现在可实施；08/09 等条件满足再启动。
 
 ### [ ] TODO-01（P1）变更范围白名单（scope guard）
 
@@ -209,11 +209,6 @@
 - 建议：`scripts/bug-commit.sh <bug-dir>` 只允许提交该 bug 相关路径 + 工具重建的索引，并在提交信息里带 `#<BUG-ID>`。
 - 验收：范围外文件被拒；消息格式由 `commit-msg` 校验；selftest 覆盖。
 
-### [ ] TODO-07（P3）存量仓同步护栏
-
-- 现状：`hooks/`、`.githooks/`、`scripts/app-verify.sh` 的修复需要手工同步到已生成的仓（本次 speaker/control-plane 就是手工同步的）。
-- 建议：`scripts/sync-guardrails.sh <control-plane-repo>` 读取 `services.json`，把 `hooks/`、`.githooks/`、`scripts/{app-verify,install-hooks,validate-project}.sh` 同步到各服务仓，并跑 `install-hooks.sh`；默认 dry-run，`--write` 才落盘。
-- 验收：dry-run 列出差异不写；`--write` 后每个仓 `git status` 只显示预期文件；selftest 覆盖。
 
 ### [ ] TODO-08（P3）push 审批技术化
 
@@ -229,40 +224,8 @@
   本地 hook 只做快速失败；`collect.yml` 的上传步骤保持"未配置即跳过"。
 - 验收：PR 上 CI 必跑且失败阻断合并；本地与 CI 的命令一致（同一脚本入口）。
 
-### [ ] TODO-10（P1）managementRepo 解析与显式失败
 
-- 现状：`managementRepo` 是生成时的绝对路径；换机器/目录后 collect 静默降级（见 4.0）。
-- 建议解析顺序：`SDL_MGMT_REPO` 环境变量 → `<service-repo>/../<project>-control-plane`（相对路径）→
-  `.sdlc/config.json` 的值。解析不到时：collect 仍生成本地报告，但输出明确警告
-  `collect: management repo not found at <path>`，不静默。
-- 验收：
-  - 在临时目录只放服务仓（无 control-plane）运行 collect → 报告生成、有警告、退出码 0；
-  - 设置 `SDL_MGMT_REPO=<临时控制平面>` 后，新的 commit 能被 collect 正确上传；
-  - 相对路径克隆（控制平面与服务仓同级）自动找到；
-  - selftest 覆盖以上三种情况（2–3 条用例）。
 
-### [ ] TODO-11（P1）采集位与上传位分离 + 本地补传
-
-- 现状：`lastCollectedSha` 同时表示“已采集”和“已上传”，两者耦合导致报告滞留后永不补传（见 4.0 坑 1）。
-- 建议：
-  - 在 `.sdlc/config.json`（或 `sync/state.json`）增加 `lastUploadedSha`；
-  - collect 只在报告成功进入控制平面（本地目录或远端 PR）后推进上传位；
-  - 新增 `scripts/replay-reports.sh <management-repo>`：把 `sync/reports/` 中 `lastUploadedSha` 之后的报告补传，
-    幂等（已存在则跳过），同时推进上传位。
-- 验收：
-  - 无控制平面连续 collect 两次 → 报告在本地、上传位不动；
-  - replay 后 control-plane `execution/<stage>/<service>/reports/` 出现全部报告；
-  - 重复 replay 幂等；selftest 覆盖（3 条用例）。
-
-### [ ] TODO-12（P2）upload-report 的基线分支可配置
-
-- 现状：硬编码 `main`（见 4.0 坑 3）；本项目控制平面默认 `master`。
-- 建议：新增 `--base <branch>` 参数；不传时用 `gh repo view --json defaultBranchRef` 探测，
-  clone（`--branch`）与 `gh pr create --base` 使用同一个基础分支。
-- 验收：
-  - 对默认分支为 `master` 的控制平面能成功开 PR；
-  - 对默认分支为 `main` 的仓仍可用；
-  - 未配置 `GH_TOKEN` 时保持 skipped/exit 0。
 
 ### [ ] TODO-13（P3）服务仓 README 的“独立开发（无 control-plane）”小节
 
@@ -317,4 +280,6 @@ git checkout main && git push gate-test main                 # 应被拦
   managementRepo 解析与显式失败、采集位/上传位分离 + 本地补传、upload-report 基线分支、README 独立开发小节；
   并按现状更新 TODO-09（SES 仓已有远端、仍无验证 CI）。
 - 2026-11-27：新增 §4.1 实施条件评估（可实施/有条件/暂不具备 + 建议顺序）；完成条目改为归档到
-  `todo-archive.md`，本文件不再保留已完成项；selftest 基线更新为 78 项。
+  `todo-archive.md`，本文件不再保留已完成项。
+- 2026-11-27：完成并归档 TODO-07（sync-guardrails）、TODO-10（managementRepo 解析）、
+  TODO-11（采集/上传分离 + replay-reports）、TODO-12（upload-report 基线分支）；selftest 95 项。
