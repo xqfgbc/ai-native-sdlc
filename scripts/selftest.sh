@@ -221,6 +221,31 @@ debt_id="$( cd "$WORK/demo-control-plane" && bash scripts/debt.sh add --kind tec
   && [ "$(jq -r --arg id "$debt_id" '.items[]|select(.id==$id)|.status' loop/07-maintain/debt/debt.json)" = "done" ] ) \
   && ok "debt registry add/due/close" || bad "debt registry"
 ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . >/dev/null ) && ok "validate-project passes" || bad "validate-project"
+
+# 4b. report hash chain (prevHash + tamper detection)
+( cd "$WORK/demo-control-plane" && bash scripts/verify-report-chain.sh . >/dev/null 2>&1 ) \
+  && ok "report hash chain verifies" || bad "report hash chain"
+chain_files="$(for f in "$WORK/demo-control-plane"/execution/*/*/reports/*.json; do
+  printf '%s\t%s\n' "$(jq -r '.metadata.createdAt' "$f")" "$f"
+done | sort | cut -f2)"
+chain_first="$(printf '%s\n' "$chain_files" | head -1)"
+if [ -n "$chain_first" ] && [ "$(printf '%s\n' "$chain_files" | grep -c .)" -ge 2 ]; then
+  cp "$chain_first" "$WORK/chain.bak"
+  jq '.spec.facts.commits=[]' "$chain_first" > "$WORK/chain.tmp" && mv "$WORK/chain.tmp" "$chain_first"
+  if ( cd "$WORK/demo-control-plane" && bash scripts/verify-report-chain.sh . ) >/dev/null 2>&1; then
+    bad "tampered report is detected"
+  else
+    ok "tampered report is detected"
+  fi
+  if ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . ) >/dev/null 2>&1; then
+    bad "validate rejects a broken report chain"
+  else
+    ok "validate rejects a broken report chain"
+  fi
+  cp "$WORK/chain.bak" "$chain_first"
+else
+  bad "report chain fixture (need >=2 reports)"
+fi
 [ -f "$WORK/demo-control-plane/loop/05-test/results.md" ] && ok "test management results (E1)" || bad "test results (E1)"
 [ -f "$WORK/demo-control-plane/wiki/dora.md" ] && ok "DORA metrics (E2)" || bad "dora (E2)"
 # Simulate a deploy report to exercise DORA lead-time computation.
@@ -353,13 +378,14 @@ res_rc=0
 ( cd "$WORK/offline-svc" && SDL_MGMT_REPO="$WORK/no-such-mgmt" bash .sdlc/collect.sh --resolve-mgmt ) >/dev/null 2>&1 || res_rc=$?
 [ "$res_rc" -eq 1 ] && ok "collect fails loudly on a missing SDL_MGMT_REPO" || bad "collect missing env"
 
-rp_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/demo-control-plane" 2>&1 )"
-printf '%s' "$rp_out" | grep -q 'uploaded=1' && ok "replay uploads the backlog report" || { echo "  replay: $rp_out"; bad "replay upload"; }
-[ -n "$(find "$WORK/demo-control-plane/execution" -name "$offline_sha.json" | head -1)" ] \
+mkdir -p "$WORK/replay-mgmt"
+rp_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/replay-mgmt" 2>&1 )"
+printf '%s' "$rp_out" | grep -q 'uploaded=[1-9]' && ok "replay uploads the backlog report" || { echo "  replay: $rp_out"; bad "replay upload"; }
+[ -n "$(find "$WORK/replay-mgmt/execution" -name "$offline_sha.json" | head -1)" ] \
   && ok "replay lands in the management repo" || bad "replay destination"
 [ "$(jq -r '.lastUploadedSha' "$WORK/offline-svc/.sdlc/config.json")" = "$offline_sha" ] \
   && ok "replay advances the upload cursor" || bad "replay cursor"
-rp2_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/demo-control-plane" 2>&1 )"
+rp2_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/replay-mgmt" 2>&1 )"
 printf '%s' "$rp2_out" | grep -q 'uploaded=0' && ok "replay is idempotent" || bad "replay idempotent"
 
 # 5e. service-local cognition (S1): statement stays local, evidence goes up.
@@ -452,6 +478,35 @@ cp "$WORK/pack.bak" "$PACK_JSON"
 scope_prop="$WORK/demo-control-plane/knowledge/proposals/P-order-service-prefer-scope-probe.json"
 [ "$(jq -r '.scope // ""' "$scope_prop" 2>/dev/null)" = "project" ] \
   && ok "analyzer marks proposals as project scope" || bad "proposal scope"
+# Retirement: item stops rendering, linked gate is retired and pruned, strict still passes.
+mkdir -p "$WORK/demo-control-plane/guardrails/gate-$prop/files"
+printf 'retire me\n' > "$WORK/demo-control-plane/guardrails/gate-$prop/files/RetireGate.txt"
+jq -n --arg id "$prop" '{id:("gate-"+$id),proposalId:$id,appliesTo:["order-service"],
+  files:[{src:"files/RetireGate.txt",dest:"sdlc/RetireGate.txt"}],status:"active"}' \
+  > "$WORK/demo-control-plane/guardrails/gate-$prop/manifest.json"
+bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service --write >/dev/null 2>&1
+( cd "$WORK/demo-control-plane" && bash scripts/retire-cognition.sh . "$prop" tester --reason "selftest retirement" >/dev/null )
+[ "$(jq -r --arg id "$prop" '.items[]|select(.id==$id)|.status' "$WORK/demo-control-plane/knowledge/pack.json")" = "retired" ] \
+  && ok "retire-cognition marks the item retired" || bad "retire status"
+[ "$(jq -r '.status' "$WORK/demo-control-plane/guardrails/gate-$prop/manifest.json")" = "retired" ] \
+  && ok "retire retires the linked gate manifest" || bad "retire manifest"
+( cd "$WORK/demo-control-plane" && bash scripts/sync-cognition.sh . "$SVC" >/dev/null )
+if grep -q "$prop" "$SVC/CLAUDE.md"; then
+  bad "retired item leaves service blocks"
+else
+  ok "retired item leaves service blocks"
+fi
+if ( cd "$WORK/demo-control-plane" && bash scripts/sync-project-gates.sh . --check ) >/dev/null 2>&1; then
+  bad "retired gate is not pruned"
+else
+  ok "retired gate is detected before pruning"
+fi
+( cd "$WORK/demo-control-plane" && bash scripts/sync-project-gates.sh . --write >/dev/null 2>&1 )
+[ ! -f "$SVC/sdlc/RetireGate.txt" ] && ok "retired gate is pruned from the service" || bad "retired gate file"
+( cd "$WORK/demo-control-plane" && bash scripts/sync-project-gates.sh . --check >/dev/null 2>&1 ) \
+  && ok "gate sync check passes after pruning" || bad "retired gate check"
+( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . --strict >/dev/null 2>&1 ) \
+  && ok "strict validate passes after retirement" || bad "retire strict validate"
 
 # 6. deterministic guard hooks (agent mode works; stdin can never hang them)
 printf 'clean\n' > "$WORK/clean.txt"

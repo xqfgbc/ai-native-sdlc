@@ -20,5 +20,7 @@
 - 门禁队列：`bash scripts/gate-queue.sh list --status open --json` / `claim` / `done --evidence`
 - 门禁下发：`bash scripts/sync-project-gates.sh . --check|--write`；严格校验 `validate-project.sh . --strict`
 - S1 汇总：`bash scripts/local-cognition-report.sh . --json`
+- 退役规则：`bash scripts/retire-cognition.sh . <id> <owner> --reason "…"`（人工）
+- 报告链：`bash scripts/verify-report-chain.sh . --json`；断链时 validate 失败
 - 签核/驳回：`python3 scripts/signoff.py`；AI 预判 `bash scripts/review-proposals.sh .`；
   驳回 CLI `bash scripts/review-proposals.sh reject <id> --owner <你>`；不得自行 promote 或驳回

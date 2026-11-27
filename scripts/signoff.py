@@ -175,6 +175,21 @@ def reject(payload):
     return 200, result
 
 
+def retire(payload):
+    item_id = str(payload.get("id", "")).strip()
+    owner = str(payload.get("owner", "")).strip()
+    reason = str(payload.get("reason") or "").strip()
+    dry_run = bool(payload.get("dryRun"))
+    if item_id not in {item.get("id") for item in pack().get("items", [])}:
+        return 400, {"ok": False, "output": "unknown pack item id"}
+    if not owner:
+        return 400, {"ok": False, "output": "owner (name or e-mail) is required"}
+    if not reason:
+        return 400, {"ok": False, "output": "reason is required"}
+    args = ["bash", "scripts/retire-cognition.sh", ".", item_id, owner, "--reason", reason]
+    return 200, run(args, dry_run)
+
+
 def add_debt(payload):
     proposal_id = str(payload.get("id", "")).strip()
     owner = str(payload.get("owner", "")).strip()
@@ -253,6 +268,7 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:
 <h1>知识签核</h1>
 <p class="sub">人工门禁：由人填写 owner 并签核；AI 不能代签。页面只监听 127.0.0.1。</p>
 <section class="card"><h2>现状</h2><div id="state" class="muted">加载中…</div><div id="debt" class="muted"></div></section>
+<section class="card"><h2>Active 认知</h2><div id="active" class="muted">加载中…</div></section>
 <section id="list"></section>
 <section class="card"><h2>下发认知包</h2><div id="services" class="muted">加载中…</div><div id="log"></div></section>
 </main>
@@ -298,6 +314,13 @@ async function load() {
   const remoteReady = state.tooling.ghAuth || state.tooling.token;
   document.getElementById("state").innerHTML +=
     ` · 远端下发：<span class="chip ${remoteReady ? "ok" : "warn"}">${remoteReady ? (state.tooling.ghAuth ? "gh" : "token") : "不可用"}</span>`;
+  const activeItems = state.pack.items.filter(i => (i.status || "active") === "active");
+  document.getElementById("active").innerHTML = activeItems.length
+    ? activeItems.map(i => `<div class="row" style="margin:8px 0">
+        <div><span class="chip">${esc(i.enforcement)}</span> ${esc(i.title)}
+          <span class="muted mono">${esc(i.id)}</span></div>
+        <button onclick="retireItem('${esc(i.id)}')">退役</button></div>`).join("")
+    : '<p class="muted">没有 active 条目。</p>';
   document.getElementById("debt").innerHTML = state.debt.length
     ? `<h3>债务到期提醒（7 天内 ${state.debt.length} 条）</h3>` + state.debt.map(d => `<div>${esc(d.id)} due=${esc(d.due)} ${esc(d.priority)} — ${esc(d.title)}</div>`).join("")
     : '<h3>债务</h3><div>7 天内没有到期债务</div>';
@@ -354,6 +377,15 @@ async function promote(id) {
   const command = commandFor(id);
   if (!confirm("将执行：\\n" + command + "\\n\\n确认签核？")) return;
   const data = await call("POST", "/api/promote", {id, owner, enforcement});
+  log(data); load();
+}
+async function retireItem(id) {
+  const owner = prompt("owner（退役也必须由人确认）");
+  if (!owner) return;
+  const reason = prompt("退役原因", "superseded or no longer applicable");
+  if (reason === null || !reason.trim()) return;
+  if (!confirm("退役该条目？pack 版本 +1；服务下次同步后不再显示。")) return;
+  const data = await call("POST", "/api/retire", {id, owner, reason});
   log(data); load();
 }
 async function rejectProposal(id) {
@@ -436,6 +468,8 @@ class Handler(BaseHTTPRequestHandler):
                 status, data = promote(payload)
             elif self.path == "/api/reject":
                 status, data = reject(payload)
+            elif self.path == "/api/retire":
+                status, data = retire(payload)
             elif self.path == "/api/debt":
                 status, data = add_debt(payload)
             elif self.path == "/api/sync":

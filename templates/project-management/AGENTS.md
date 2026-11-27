@@ -57,3 +57,6 @@
 - deterministic 签核会进 `loop/04-build/gates/queue.json`：AI 用 `gate-queue.sh list/claim/done` 领取并关闭，
   `done` 必须带门禁证据；实现只写一份（control-plane/guardrails），用 `sync-project-gates.sh` 下发。
 - `validate-project.sh` 默认对"deterministic 无门禁证据"告警；`--strict` 时失败（用于发布/CI）。
+- 退役 active 规则是人工决定：`scripts/retire-cognition.sh`；随后 `sync-cognition.sh` 移除渲染，
+  `sync-project-gates.sh --write` 清理退役门禁文件。报告哈希链由 `verify-report-chain.sh` 校验，
+  断链时 `validate-project.sh` 直接失败。

@@ -18,13 +18,13 @@
 | git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
 | git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
 | git push | `pre-push` | `.githooks/pre-push` | `release*` 直推需走 PR；其余分支（含 main/master）可直推，但必须先通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由；分支规则不可跳过） |
-| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（122 项）、技能/agent 配置评测 | 无（远端权威） |
+| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（132 项）、技能/agent 配置评测 | 无（远端权威） |
 
 `pre-push` 的"本仓验证"按仓类型分派：
 
 - 服务仓：`scripts/app-verify.sh build` + `test` + `lint`（不含需要 Docker 的 itest）
 - 控制平面仓：`scripts/validate-project.sh .`
-- 框架仓：`scripts/selftest.sh`（122 项）
+- 框架仓：`scripts/selftest.sh`（132 项）
 
 安装方式：`core.hooksPath` 是**本地配置**；生成器会写入并在 bootstrap 后启用，新 clone 靠 SessionStart 或 `AGENTS.md` 第 0 步恢复。
 
@@ -149,7 +149,7 @@
 **全局前置条件**（每条都适用）：
 
 1. 按 §4 要求先走 `loop/01-intent → 02-spec → 03-plan`，plan 写明改动文件与验证命令；
-2. 新增门禁必须带 selftest 用例（当前基线 122 项，改完同步 §1 计数）；
+2. 新增门禁必须带 selftest 用例（当前基线 132 项，改完同步 §1 计数）；
 3. 完成后按文件头的归档规则移入 `todo-archive.md`。
 
 **建议顺序**：01 → 03 → 02 → 06 → 05 → 04；13 现在可实施；08/09 等条件满足再启动。
@@ -289,8 +289,10 @@ git checkout main && git push gate-test main                 # 应被拦
   collect 只上报 origin/problem/summary/gate 证据；proposal/pack 增加 scope 校验；selftest 108 项。
 - 2026-11-27：知识分层 Phase 2——`gate-queue.sh`（deterministic 签核自动入队）、
   `sync-project-gates.sh`（control-plane/guardrails 一份实现下发）、`local-cognition-report.sh`
-  （S1 覆盖率/stale/跨服务提升候选）、`validate-project.sh --strict`；会话只注入一行后台待办；selftest 122 项。
+  （S1 覆盖率/stale/跨服务提升候选）、`validate-project.sh --strict`；会话只注入一行后台待办；selftest 132 项。
 - 2026-11-27：补齐 AI 可发现性——新增 `local-cognition` / `implement-gate` 技能（25 skills），
-  存量仓同步技能与 AGENTS/CLAUDE；`validate --strict` 校验项目门禁已下发，`gate-queue done` 拒绝未同步的 gate；selftest 122 项。
+  存量仓同步技能与 AGENTS/CLAUDE；`validate --strict` 校验项目门禁已下发，`gate-queue done` 拒绝未同步的 gate；selftest 132 项。
 - 2026-11-27：回填 10 条 deterministic 的门禁证据；control-plane 创建 `loop/04-build/gates/strict`，
-  pre-push 改用 `--strict`；pack 0.1.11 下发到 speaker（注册表同步到 0.1.11）；selftest 122 项。
+  pre-push 改用 `--strict`；pack 0.1.11 下发到 speaker（注册表同步到 0.1.11）；selftest 132 项。
+- 2026-11-27：补齐规则退役（`retire-cognition.sh`、signoff Active 列表、guardrail/队列联动、sync 清理）
+  与报告哈希链校验（`verify-report-chain.sh`，validate 断链即失败）；selftest 132 项。

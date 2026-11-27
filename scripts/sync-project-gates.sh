@@ -48,6 +48,7 @@ for manifest in "$MGMT_ABS"/guardrails/*/manifest.json; do
   gdir="$(dirname "$manifest")"
   gid="$(jq -r '.id // ""' "$manifest")"
   [ -n "$gid" ] || gid="$(basename "$gdir")"
+  gstatus="$(jq -r '.status // "active"' "$manifest" 2>/dev/null || echo active)"
   while IFS= read -r svc; do
     [ -n "$svc" ] || continue
     [ -n "$ONLY" ] && [ "$svc" != "$ONLY" ] && continue
@@ -57,11 +58,19 @@ for manifest in "$MGMT_ABS"/guardrails/*/manifest.json; do
       continue
     fi
     changes=()
-    while IFS=$'\t' read -r src dest; do
-      [ -n "$src" ] || continue
-      srcf="$gdir/$src"; destf="$target/$dest"
-      cmp -s "$srcf" "$destf" || changes+=("$dest")
-    done <<< "$(jq -r '.files[]? | [.src,.dest]|@tsv' "$manifest")"
+    if [ "$gstatus" = "retired" ]; then
+      # Desired state for a retired gate: the files are gone.
+      while IFS=$'\t' read -r src dest; do
+        [ -n "$src" ] || continue
+        [ -f "$target/$dest" ] && changes+=("$dest (retired)")
+      done <<< "$(jq -r '.files[]? | [.src,.dest]|@tsv' "$manifest")"
+    else
+      while IFS=$'\t' read -r src dest; do
+        [ -n "$src" ] || continue
+        srcf="$gdir/$src"; destf="$target/$dest"
+        cmp -s "$srcf" "$destf" || changes+=("$dest")
+      done <<< "$(jq -r '.files[]? | [.src,.dest]|@tsv' "$manifest")"
+    fi
     n="${#changes[@]}"
     changes_total=$((changes_total + n))
     if [ "$n" -eq 0 ]; then
@@ -72,15 +81,23 @@ for manifest in "$MGMT_ABS"/guardrails/*/manifest.json; do
       if [ "$WRITE" = "1" ]; then
         while IFS=$'\t' read -r src dest; do
           [ -n "$src" ] || continue
-          mkdir -p "$(dirname "$target/$dest")"
-          cp "$gdir/$src" "$target/$dest"
+          if [ "$gstatus" = "retired" ]; then
+            rm -f "$target/$dest"
+          else
+            mkdir -p "$(dirname "$target/$dest")"
+            cp "$gdir/$src" "$target/$dest"
+          fi
         done <<< "$(jq -r '.files[]? | [.src,.dest]|@tsv' "$manifest")"
-        echo "sync-project-gates: wrote $n file(s) into $svc"
+        if [ "$gstatus" = "retired" ]; then
+          echo "sync-project-gates: pruned retired gate files from $svc"
+        else
+          echo "sync-project-gates: wrote $n file(s) into $svc"
+        fi
       fi
     fi
-    JSON_SERVICES="$(printf '%s' "$JSON_SERVICES" | jq --arg g "$gid" --arg s "$svc" --arg p "$target" \
+    JSON_SERVICES="$(printf '%s' "$JSON_SERVICES" | jq --arg g "$gid" --arg s "$svc" --arg p "$target" --arg gs "$gstatus" \
       --argjson ch "$(printf '%s\n' ${changes[@]+"${changes[@]}"} | jq -R -s 'split("\n")|map(select(length>0))')" \
-      '. + [{gate:$g,service:$s,path:$p,changes:$ch}]')"
+      '. + [{gate:$g,status:$gs,service:$s,path:$p,changes:$ch}]')"
   done <<< "$(jq -r '.appliesTo[]?' "$manifest")"
 done
 

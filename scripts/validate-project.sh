@@ -30,6 +30,9 @@ if [ ! -f "$PACK" ]; then fail_msg "missing $PACK"; else
   # S1 (service-local) rules must never be promoted into the project pack.
   jq -e '[.items[]|select(.scope? != null and .scope != "project")]|length==0' "$PACK" >/dev/null 2>&1 \
     || fail_msg "pack.json contains non-project scope (S1 stays in the service repo)"
+  jq -e '[.items[]|select(.status=="retired")
+          |select((.retiredAt // "")=="" or (.retiredBy // "")=="")]|length==0' "$PACK" >/dev/null 2>&1 \
+    || fail_msg "pack.json: retired item missing retiredAt/retiredBy"
 fi
 
 # 2b. cognition adoption consistency
@@ -94,6 +97,7 @@ if [ -d guardrails ]; then
   for m in $(ls guardrails/*/manifest.json 2>/dev/null || true); do
     gid="$(jq -r '.id // ""' "$m" 2>/dev/null || true)"
     [ -n "$gid" ] || gid="$(basename "$(dirname "$m")")"
+    mstatus="$(jq -r '.status // "active"' "$m" 2>/dev/null || echo active)"
     while IFS= read -r svc; do
       [ -n "$svc" ] || continue
       repo="$(jq -r --arg n "$svc" '.services[]|select(.name==$n)|.repo // empty' "$REG" 2>/dev/null || true)"
@@ -109,7 +113,12 @@ if [ -d guardrails ]; then
       fi
       while IFS=$'\t' read -r src dest; do
         [ -n "$src" ] || continue
-        if ! cmp -s "$(dirname "$m")/$src" "$path/$dest"; then
+        if [ "$mstatus" = "retired" ]; then
+          if [ -f "$path/$dest" ]; then
+            echo "VALIDATE: WARN: retired gate $gid still present in $svc: $dest" >&2
+            sync_missing=$((sync_missing+1))
+          fi
+        elif ! cmp -s "$(dirname "$m")/$src" "$path/$dest"; then
           echo "VALIDATE: WARN: gate $gid not synced to $svc: $dest" >&2
           sync_missing=$((sync_missing+1))
         fi
@@ -130,6 +139,12 @@ for f in $REPORTS; do
   jq -e '[.spec.localCognition[]? | select(has("statement"))] | length == 0' "$f" >/dev/null 2>&1 \
     || fail_msg "report leaks a local cognition statement: $f"
 done
+
+# 3b. report hash chain (tamper/gap detection)
+if [ -n "$REPORTS" ] && [ -f scripts/verify-report-chain.sh ]; then
+  bash scripts/verify-report-chain.sh . >/dev/null 2>&1 \
+    || fail_msg "report hash chain is broken (run scripts/verify-report-chain.sh . --json)"
+fi
 
 # 4. wiki generated (the wiki is derived from reports; with none, there is nothing to derive)
 if [ -n "$REPORTS" ] && [ ! -f wiki/index.md ]; then

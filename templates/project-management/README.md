@@ -64,6 +64,20 @@ bash scripts/validate-project.sh . --strict      # deterministic 必须有门禁
 回填完 deterministic 的门禁证据后，创建 `loop/04-build/gates/strict`（内容随意），本仓 `pre-push`
 会自动改用 `validate-project.sh --strict`；没有这个 marker 时仍只告警，避免历史条目阻塞推送。
 
+### 规则退役与报告链校验
+
+退役是人工决定（CLI 或签核页的 Active 认知列表）：
+
+```bash
+bash scripts/retire-cognition.sh . <item-id> <owner> --reason "superseded by ..." [--superseded-by <new-id>]
+bash scripts/sync-cognition.sh . <service>        # 从 CLAUDE.md/AGENTS.md 移除
+bash scripts/sync-project-gates.sh . --write      # 删除退役门禁在服务里的文件
+```
+
+退役会把 pack 版本 +1，标记关联的 guardrail manifest 为 retired，并把未完成的门禁任务关闭。
+`verify-report-chain.sh . --json` 校验 execution 报告的 `prevHash` 链和文件名；`validate-project.sh`
+发现断链会直接失败（篡改/缺口）。
+
 S1 证据汇总：
 
 ```bash

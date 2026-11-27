@@ -66,7 +66,8 @@ cp "$ROOT/scripts/analyze-reports.sh" "$ROOT/scripts/validate-project.sh" \
    "$ROOT/scripts/debt.sh" "$ROOT/scripts/review-proposals.sh" "$ROOT/scripts/sync-cognition-remote.sh" \
    "$ROOT/scripts/cognition.sh" "$ROOT/scripts/sync-guardrails.sh" \
    "$ROOT/scripts/gate-queue.sh" "$ROOT/scripts/sync-project-gates.sh" \
-   "$ROOT/scripts/local-cognition-report.sh" "$TARGET/scripts/"
+   "$ROOT/scripts/local-cognition-report.sh" "$ROOT/scripts/retire-cognition.sh" \
+   "$ROOT/scripts/verify-report-chain.sh" "$TARGET/scripts/"
 chmod +x "$TARGET"/scripts/*.sh
 
 # Control-plane AI skills (canonical source: framework .agents/skills).
