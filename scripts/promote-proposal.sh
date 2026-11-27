@@ -11,6 +11,11 @@ case "$ENFORCEMENT" in advisory|deterministic) ;; *) echo "enforcement must be a
 cd "$MGMT"
 PROP="knowledge/proposals/${ID}.json"
 [ -f "$PROP" ] || { echo "ERROR: proposal not found: $PROP" >&2; exit 1; }
+STATUS="$(jq -r '.status // "proposed"' "$PROP")"
+if [ "$STATUS" = "rejected" ]; then
+  echo "ERROR: proposal $ID was rejected; reopen it before promoting" >&2
+  exit 1
+fi
 [ -f knowledge/pack.json ] || { echo "ERROR: missing knowledge/pack.json" >&2; exit 1; }
 
 TYPE="$(jq -r .type "$PROP")"

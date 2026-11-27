@@ -250,6 +250,25 @@ if [ -n "$prop" ]; then
   jq -e --arg id "$dup_id" '.clusters[]|select(any(.members[]; .id==$id))' \
     "$WORK/demo-control-plane/knowledge/reviews/clusters.json" >/dev/null 2>&1 \
     && ok "cluster flags a reworded duplicate of an active item" || bad "proposal clustering"
+  # Rejection flow: tombstone, decision record, no promotion, analyzer must not recreate it.
+  jq -n --arg id "$prop" --arg t "$active_title" \
+    '{apiVersion:"sdlc/v1",kind:"KnowledgeProposal",id:$id,type:"constraint",scope:"project",
+      title:$t,statement:$t,status:"proposed",owner:"",provenance:[],repeatCount:1,repeat:false}' \
+    > "$WORK/demo-control-plane/knowledge/proposals/$prop.json"
+  ( cd "$WORK/demo-control-plane" && bash scripts/review-proposals.sh . >/dev/null )
+  ( cd "$WORK/demo-control-plane" && bash scripts/review-proposals.sh reject "$prop" --owner tester --reason "duplicate probe" >/dev/null )
+  [ "$(jq -r .status "$WORK/demo-control-plane/knowledge/proposals/$prop.json")" = "rejected" ] \
+    && ok "reject tombstones the proposal" || bad "reject status"
+  [ "$(jq -r '.human.decision' "$WORK/demo-control-plane/knowledge/reviews/$prop.json")" = "reject" ] \
+    && ok "reject records the human decision" || bad "reject decision record"
+  if ( cd "$WORK/demo-control-plane" && bash scripts/promote-proposal.sh . "$prop" tester deterministic ) >/dev/null 2>&1; then
+    bad "promote refuses a rejected proposal"
+  else
+    ok "promote refuses a rejected proposal"
+  fi
+  ( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )
+  [ "$(jq -r .status "$WORK/demo-control-plane/knowledge/proposals/$prop.json" 2>/dev/null)" = "rejected" ] \
+    && ok "analyzer keeps the rejected tombstone" || bad "rejected tombstone"
 else
   bad "no proposal to promote"
 fi

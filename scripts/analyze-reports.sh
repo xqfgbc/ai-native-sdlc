@@ -71,6 +71,10 @@ for report_dir in $(find execution -type d -name reports 2>/dev/null | sort); do
       slug="$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-*$//' | cut -c1-40)"
       [ -n "$slug" ] || slug="item"
       prop="knowledge/proposals/P-${service}-${slug}.json"
+      # A rejected proposal is a tombstone: never recreate or reopen it.
+      if [ -f "$prop" ] && [ "$(jq -r '.status // ""' "$prop")" = "rejected" ]; then
+        continue
+      fi
       count="$(printf '%s' "$TITLE_COUNTS" | jq -r --arg t "$title" '.[$t] // 0')"
       [ -n "$count" ] || count=0
       repeat="false"; [ "${count:-0}" -ge 2 ] && repeat="true"
@@ -208,6 +212,7 @@ MTTR="n/a"
   found=0
   for p in knowledge/proposals/*.json; do
     [ -f "$p" ] || continue
+    [ "$(jq -r '.status // ""' "$p")" = "rejected" ] && continue
     found=1
     jq -r '"- \(.id) [\(.type)] \(.title) — status: \(.status), repeats: \(.repeatCount // 1)\(if (.repeat // false) then " ⚠ repeated" else "" end)"' "$p"
   done

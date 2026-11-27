@@ -17,4 +17,5 @@
 - 门禁：constitution/intent/spec/plan/build/test/deploy/maintain 各自有人类 owner。
 - 提交信息：`[<姓名>] #<卡号> <类型>: <概述>`；无卡号 `#N/A`；AI 生成用 `[AI-Agent]`。
 - 债务：`bash scripts/debt.sh due|add|list`（AI 可登记/备注；关闭需证据或人）
-- 签核：`python3 scripts/signoff.py`；AI 预判 `bash scripts/review-proposals.sh .`；不得自行 promote
+- 签核/驳回：`python3 scripts/signoff.py`；AI 预判 `bash scripts/review-proposals.sh .`；
+  驳回 CLI `bash scripts/review-proposals.sh reject <id> --owner <你>`；不得自行 promote 或驳回

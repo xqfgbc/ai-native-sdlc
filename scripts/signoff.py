@@ -44,7 +44,19 @@ def proposals():
         for name in sorted(os.listdir(directory)):
             if name.endswith(".json"):
                 data = read_json(os.path.join(directory, name), None)
-                if isinstance(data, dict):
+                if isinstance(data, dict) and data.get("status") != "rejected":
+                    items.append(data)
+    return items
+
+
+def rejected_proposals():
+    directory = os.path.join(ROOT, "knowledge", "proposals")
+    items = []
+    if os.path.isdir(directory):
+        for name in sorted(os.listdir(directory)):
+            if name.endswith(".json"):
+                data = read_json(os.path.join(directory, name), None)
+                if isinstance(data, dict) and data.get("status") == "rejected":
                     items.append(data)
     return items
 
@@ -144,6 +156,22 @@ def promote(payload):
     result = run(args, dry_run)
     if result["ok"] and not dry_run:
         record_decision(proposal_id, "promote-" + enforcement, owner)
+    return 200, result
+
+
+def reject(payload):
+    proposal_id = str(payload.get("id", "")).strip()
+    owner = str(payload.get("owner", "")).strip()
+    reason = str(payload.get("reason") or payload.get("note") or "").strip()
+    dry_run = bool(payload.get("dryRun"))
+    if proposal_id not in {item.get("id") for item in proposals()}:
+        return 400, {"ok": False, "output": "unknown or already rejected proposal id"}
+    if not owner:
+        return 400, {"ok": False, "output": "owner (name or e-mail) is required"}
+    args = ["bash", "scripts/review-proposals.sh", "reject", proposal_id, "--owner", owner]
+    if reason:
+        args += ["--reason", reason]
+    result = run(args, dry_run)
     return 200, result
 
 
@@ -266,7 +294,7 @@ function aiBlock(review) {
 async function load() {
   const state = await call("GET", "/api/state");
   document.getElementById("state").innerHTML =
-    `项目 <b>${esc(state.project)}</b> · pack <span class="mono">v${esc(state.pack.version)}</span> · active ${state.pack.items.length} 条 · 待签核 ${state.proposals.length} 条`;
+    `项目 <b>${esc(state.project)}</b> · pack <span class="mono">v${esc(state.pack.version)}</span> · active ${state.pack.items.length} 条 · 待签核 ${state.proposals.length} 条 · 已驳回 ${state.rejectedCount || 0} 条`;
   const remoteReady = state.tooling.ghAuth || state.tooling.token;
   document.getElementById("state").innerHTML +=
     ` · 远端下发：<span class="chip ${remoteReady ? "ok" : "warn"}">${remoteReady ? (state.tooling.ghAuth ? "gh" : "token") : "不可用"}</span>`;
@@ -292,6 +320,7 @@ async function load() {
             <option value="advisory">advisory（建议性）</option></select></div>
           <div><label>债务优先级</label><select id="prio-${esc(p.id)}"><option>P1</option><option selected>P2</option><option>P3</option></select></div>
           <div><label>债务到期</label><input type="date" id="due-${esc(p.id)}" value="${plusDays(14)}"></div>
+          <button onclick="rejectProposal('${esc(p.id)}')">驳回</button>
           <button class="primary" onclick="promote('${esc(p.id)}')">签核</button>
           <button onclick="addDebt('${esc(p.id)}')">登记债务</button>
         </div>
@@ -323,6 +352,15 @@ async function promote(id) {
   const command = commandFor(id);
   if (!confirm("将执行：\\n" + command + "\\n\\n确认签核？")) return;
   const data = await call("POST", "/api/promote", {id, owner, enforcement});
+  log(data); load();
+}
+async function rejectProposal(id) {
+  const owner = document.getElementById("owner-" + id).value.trim();
+  if (!owner) { alert("请填写 owner：驳回同样必须由人确认"); return; }
+  const reason = prompt("驳回原因（可选，例如：与 active 规则重复）", "duplicate of an active rule");
+  if (reason === null) return;
+  if (!confirm("驳回该 proposal？它会标记为 rejected，从待签列表移除且不再重新生成。")) return;
+  const data = await call("POST", "/api/reject", {id, owner, reason});
   log(data); load();
 }
 async function addDebt(id) {
@@ -375,6 +413,7 @@ class Handler(BaseHTTPRequestHandler):
                 project = project[:-len("-control-plane")]
             with LOCK:
                 self.send_json(200, {"project": project, "pack": pack(), "proposals": proposals(),
+                                     "rejectedCount": len(rejected_proposals()),
                                      "services": services(), "reviews": reviews(),
                                      "debt": debt_items(7), "tooling": tooling()})
             return
@@ -393,6 +432,8 @@ class Handler(BaseHTTPRequestHandler):
         with LOCK:
             if self.path == "/api/promote":
                 status, data = promote(payload)
+            elif self.path == "/api/reject":
+                status, data = reject(payload)
             elif self.path == "/api/debt":
                 status, data = add_debt(payload)
             elif self.path == "/api/sync":

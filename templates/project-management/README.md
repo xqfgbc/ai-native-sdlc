@@ -27,7 +27,15 @@ python3 scripts/signoff.py            # http://127.0.0.1:8765
 ```
 
 页面展示 AI 预判（建议/置信度/理由），填写 owner、选择 `deterministic|advisory`；卡片常驻显示将执行的命令，
-确认后签核，或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR（优先 gh；无 gh 时用 `GH_TOKEN` 直连 API；两者都没有则打印网页修改指引）。
+确认后签核、**驳回**或把 proposal 登记为债务；新 pack 可下发到本地服务仓或对远端仓开 PR（优先 gh；无 gh 时用 `GH_TOKEN` 直连 API；两者都没有则打印网页修改指引）。
+
+驳回会把 proposal 标记为 `status: rejected`（墓碑）：从待签列表移除，`analyze-reports.sh` 不再重建，
+`promote-proposal.sh` 拒绝提升它；驳回决定与 AI 预判的一致性照常计入 `review-proposals.sh stats`。
+AI 预判为 `reject-duplicate` 时，推荐的动作就是驳回；也可以直接用 CLI：
+
+```bash
+bash scripts/review-proposals.sh reject <proposal-id> --owner <你> --reason "duplicate of <active-id>"
+```
 
 ### 认知如何到达 AI
 

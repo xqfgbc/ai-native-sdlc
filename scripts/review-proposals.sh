@@ -9,13 +9,16 @@
 #   review-proposals.sh cluster [--json]               # group proposals that duplicate an active item
 #                                                      # (shared distinctive tokens) and mark the review
 #                                                      # suggestion reject-duplicate. Never activates.
+#   review-proposals.sh reject <proposal-id> --owner <name> [--reason text] [--json]
+#        # Human rejection: tombstone the proposal (status=rejected) so analyze-reports
+#        # never recreates it, and record the decision (agreement with the AI suggestion).
 #
 # The suggestion is advisory: a human still signs via signoff.py / promote-proposal.sh.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MGMT="${1:-.}"
-[ "$MGMT" = "stats" ] || [ "$MGMT" = "record" ] || [ "$MGMT" = "cluster" ] || true
-if [ "${1:-}" = "stats" ] || [ "${1:-}" = "record" ] || [ "${1:-}" = "cluster" ]; then
+[ "$MGMT" = "stats" ] || [ "$MGMT" = "record" ] || [ "$MGMT" = "cluster" ] || [ "$MGMT" = "reject" ] || true
+if [ "${1:-}" = "stats" ] || [ "${1:-}" = "record" ] || [ "${1:-}" = "cluster" ] || [ "${1:-}" = "reject" ]; then
   MGMT="."
 else
   MGMT="${1:-.}"
@@ -38,6 +41,60 @@ shared_of() {
 }
 
 case "${1:-}" in
+  reject)
+    ID="${2:-}"; shift 2 || true
+    OWNER=""; REASON=""; JSON_OUT=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --owner) OWNER="${2:-}"; shift 2 ;;
+        --reason|--note) REASON="${2:-}"; shift 2 ;;
+        --json) JSON_OUT=1; shift ;;
+        *) echo "review: unknown option $1" >&2; exit 1 ;;
+      esac
+    done
+    [ -n "$ID" ] && [ -n "$OWNER" ] || {
+      echo "review: reject needs <id> --owner <name> [--reason text]" >&2; exit 1; }
+    PROP="knowledge/proposals/$ID.json"
+    [ -f "$PROP" ] || { echo "review: proposal not found: $PROP" >&2; exit 1; }
+    STATUS="$(jq -r '.status // "proposed"' "$PROP")"
+    case "$STATUS" in
+      rejected)
+        if [ "$JSON_OUT" = 1 ]; then jq -n --arg id "$ID" '{id:$id,status:"rejected",already:true}'
+        else echo "review: $ID already rejected"; fi
+        exit 0 ;;
+      active) echo "review: $ID is active; cannot reject" >&2; exit 1 ;;
+    esac
+
+    tmp="$(mktemp)"
+    jq --arg at "$NOW" --arg o "$OWNER" --arg r "$REASON" \
+      '.status="rejected" | .rejectedAt=$at | .rejectedBy=$o | .rejectionReason=$r' \
+      "$PROP" > "$tmp" && mv "$tmp" "$PROP"
+
+    # Record the decision with the same agreement rules as `record`.
+    RF="$REVIEWS/$ID.json"; mkdir -p "$REVIEWS"
+    SUG=""
+    if [ -f "$RF" ]; then SUG="$(jq -r '.ai.suggestion // ""' "$RF")"; fi
+    AGREED="false"
+    case "$SUG" in reject|reject-duplicate) AGREED="true" ;; esac
+    if [ -f "$RF" ]; then
+      tmp="$(mktemp)"
+      jq --arg o "$OWNER" --arg n "$REASON" --arg at "$NOW" --argjson a "$AGREED" \
+        '.human={decision:"reject",owner:$o,at:$at,agreed:$a,note:$n}' "$RF" > "$tmp" && mv "$tmp" "$RF"
+    else
+      jq -n --arg id "$ID" --arg at "$NOW" --arg o "$OWNER" --arg n "$REASON" --argjson a "$AGREED" \
+        '{apiVersion:"sdlc/v1",kind:"ProposalReview",proposalId:$id,generatedAt:$at,
+          ai:{suggestion:"",confidence:"",risk:"",reasons:[],gateHits:[],service:"",repeatCount:1},
+          human:{decision:"reject",owner:$o,at:$at,agreed:$a,note:$n}}' > "$RF"
+    fi
+
+    if [ "$JSON_OUT" = 1 ]; then
+      jq -n --arg id "$ID" --arg o "$OWNER" --arg r "$REASON" --argjson a "$AGREED" \
+        '{id:$id,status:"rejected",owner:$o,reason:$r,agreedWithAI:$a}'
+    else
+      echo "review: rejected $ID (owner $OWNER, agreed with AI: $AGREED)"
+    fi
+    exit 0
+    ;;
   cluster)
     JSON_OUT=0; [ "${2:-}" = "--json" ] && JSON_OUT=1
     PACK_JSON="knowledge/pack.json"
@@ -46,6 +103,7 @@ case "${1:-}" in
     shopt -s nullglob
     for prop in knowledge/proposals/*.json; do
       [ -f "$prop" ] || continue
+      [ "$(jq -r '.status // ""' "$prop")" = "rejected" ] && continue
       pid="$(jq -r '.id' "$prop")"
       ptitle="$(jq -r '.title // ""' "$prop")"
       ptoks="$(tokens_of "$ptitle")"
@@ -296,6 +354,7 @@ shopt -s nullglob
 found=0
 for prop in "$PROPOSALS"/*.json; do
   [ -f "$prop" ] || continue
+  [ "$(jq -r '.status // ""' "$prop")" = "rejected" ] && continue
   found=$((found+1))
   write_review "$prop"
 done
