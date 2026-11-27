@@ -303,12 +303,14 @@ async function load() {
     : '<h3>债务</h3><div>7 天内没有到期债务</div>';
   const list = document.getElementById("list");
   if (!state.proposals.length) {
-    list.innerHTML = '<section class="card"><h2>待签核</h2><p class="muted">没有待签核的 proposal。</p></section>';
+    list.innerHTML = '<section class="card"><h2>待签核</h2><p class="muted">没有待签核的 proposal。</p>'
+      + '<p class="muted">服务本地（S1）规则不进这里：在服务仓用 <code>bash scripts/local-cognition.sh add …</code>，只上报证据。</p></section>';
   } else {
     list.innerHTML = state.proposals.map(p => `
       <section class="card">
         <h2>${esc(p.title)}</h2>
         <div><span class="chip">${esc(p.type)}</span><span class="chip">${esc(p.id)}</span>
+          <span class="chip">scope ${esc(p.scope || "project")}</span>
           <span class="chip ${p.repeat ? "warn" : ""}">repeat ${p.repeatCount ?? 1}${p.repeat ? " · 建议提升" : ""}</span></div>
         ${aiBlock(state.reviews[p.id])}
         <p>${esc(p.statement || "")}</p>

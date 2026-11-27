@@ -17,7 +17,7 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 
 ## 框架仓验证（根目录没有 Gradle 工程）
 
-- `bash scripts/selftest.sh` —— 应 **99 项全绿**
+- `bash scripts/selftest.sh` —— 应 **108 项全绿**
 - `./scripts/validate-skills.sh` —— 应 **OK（23 skills / 8 agents）**
 - `bash -n scripts/*.sh` —— shell 语法检查
 
@@ -77,6 +77,8 @@ AI-Native SDLC 的**工厂/模板仓**，生成项目仓与服务仓，不承载
 - Spring 坑：field `@Autowired`、private/自调用 `@Transactional`、返回 JPA 实体、N+1、
   `open-in-view: true`、生产 `ddl-auto: update`、无界 `findAll()`、缺 `@Valid`、无超时出站调用
 - 确定性门禁：`hooks/spring-guard.sh`、生成的 `ArchitectureTest`、`scripts/check-endpoints.sh`、CI
+- 知识分层：服务本地规则（S1）用 `scripts/local-cognition.sh`，statement 不出服务仓，collect 只上报
+  `origin/problem/summary/gate` 证据；只有项目级（S2）规则才进 control-plane 签核与下发
 
 ## 验证你的工作
 

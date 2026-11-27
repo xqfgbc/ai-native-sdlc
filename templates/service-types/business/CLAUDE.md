@@ -17,5 +17,8 @@
 5. **不要自行 push**；`release*` 分支必须走 PR，其余分支推送前会先跑本仓验证。
 6. **延期/受阻**：`bash scripts/debt.sh add --kind <tech|test|ops|security|intent> --title "…" \
    --priority P2 --owner <你> --due YYYY-MM-DD`（登记到控制平面债务表）。
-7. **结束前**：写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`（人的指令/实际改动/纠正/规则缺口/未决问题）并随改动提交；
+7. **服务本地规则（S1）**：`bash scripts/local-cognition.sh add --statement "…" --problem "…" \
+   --origin-ref <来源> --enforcement deterministic --gate-type archunit --gate-name <规则>`；
+   statement 只在本仓，collect 只上报证据，不进控制平面签核。
+8. **结束前**：写 `sdlc/session-log/<YYYYMMDD-HHMM>.md`（人的指令/实际改动/纠正/规则缺口/未决问题）并随改动提交；
    Stop hook 会在有实质提交却没写日志时阻止结束。

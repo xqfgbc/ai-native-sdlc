@@ -235,7 +235,7 @@ frontend-vue 仓             → Vue 3 + Vite
 | 模板 | `templates/project-management/` + 6 类服务模板 + `_shared` |
 | 生成器 | `scripts/new-project.sh` / `new-service-repo.sh`（本地，不建远端仓） |
 | 闭环 | `collect.sh` / `analyze-reports.sh` / `promote-proposal.sh` / `sync-cognition.sh` / `upload-report.sh` |
-| 验证 | `scripts/selftest.sh`（**99 项**）、`scripts/validate-skills.sh` |
+| 验证 | `scripts/selftest.sh`（**108 项**）、`scripts/validate-skills.sh` |
 | 护栏 | `hooks/`、`.githooks/`、CI、`autopilot-gate.sh`、`scan-findings.sh` |
 | 认知 | proposal → 人工签核 → pack 版本化 → 下发；`repeat` 蒸馏（D4） |
 | 情报 | `intake/` + `intake-signal.sh`（Slack/Linear/邮件） |

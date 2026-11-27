@@ -131,6 +131,14 @@ if [ -n "$SESSION_FILES" ]; then
   done <<< "$SESSION_FILES"
 fi
 
+# S1 local cognition: evidence/context only. The normative statement stays local.
+LOCAL_FACTS="[]"
+LOCAL_FILE="$SVC_DIR/.sdlc/local-cognition.json"
+if [ -f "$LOCAL_FILE" ]; then
+  LOCAL_FACTS="$(jq '[.items[]|select(.status=="active")
+    |{id,scope,kind,enforcement,origin,problem,summary,gate,evidence,status}]' "$LOCAL_FILE" 2>/dev/null || echo '[]')"
+fi
+
 PREV_HASH="$(jq -r '.lastHash // ""' "$SVC_DIR/sync/state.json" 2>/dev/null || echo "")"
 REVIEW="auto"
 [ "$N_FILES" -gt 20 ] && REVIEW="needs_review"
@@ -140,7 +148,8 @@ REPORT="$(jq -n \
   --arg svc "$SERVICE" --arg type "$TYPE" --arg stage "$STAGE" \
   --arg from "$FROM" --arg to "$TO" --arg review "$REVIEW" --arg prev "$PREV_HASH" \
   --argjson commits "$COMMITS" --argjson files "$CHANGED" --argjson reqs "$REQS" \
-  --argjson layers "$LAYERS" --argjson cand "$CANDIDATES" --argjson tests "$TESTS" --argjson arch "$ARCH" --argjson deps "$DEPS" '
+  --argjson layers "$LAYERS" --argjson cand "$CANDIDATES" --argjson tests "$TESTS" --argjson arch "$ARCH" --argjson deps "$DEPS" \
+  --argjson local "$LOCAL_FACTS" '
   {
     apiVersion: "sdlc/v1", kind: "ExecutionReport",
     metadata: { service:$svc, repo:"", type:$type, agent:"collector", trigger:"commit",
@@ -149,7 +158,8 @@ REPORT="$(jq -n \
             facts: { commits:$commits, filesChanged:$files, layers:$layers,
                      tests:$tests, architectureSignals:$arch, dependencyFilesChanged:$deps },
             interactions: [], decisions: [], ruleViolations: [],
-            candidateKnowledge: $cand, review: { status:$review } }
+            candidateKnowledge: $cand, localCognition: $local,
+            review: { status:$review } }
   }')"
 
 HASH="$(printf '%s' "$REPORT" | (command -v sha256sum >/dev/null && sha256sum || shasum -a 256) | awk '{print $1}')"

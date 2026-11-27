@@ -97,7 +97,7 @@ for report_dir in $(find execution -type d -name reports 2>/dev/null | sort); do
         echo "analyze: proposal -> $prop (repeat=$repeat count=$count)"
       else
         jq --argjson count "$count" --argjson repeat "$repeat" '
-          .repeatCount=$count | .repeat=$repeat |
+          .scope=(.scope // "project") | .repeatCount=$count | .repeat=$repeat |
           .recommendation=(if $repeat then "promote to constraint (repeated correction)" else (.recommendation // "review") end)' \
           "$prop" > "$prop.tmp" && mv "$prop.tmp" "$prop"
       fi

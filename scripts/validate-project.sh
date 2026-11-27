@@ -21,6 +21,9 @@ PACK="knowledge/pack.json"
 if [ ! -f "$PACK" ]; then fail_msg "missing $PACK"; else
   jq -e '.apiVersion == "sdlc/v1" and .kind == "CognitionPack" and (.items|type=="array")' "$PACK" >/dev/null \
     || fail_msg "pack.json invalid"
+  # S1 (service-local) rules must never be promoted into the project pack.
+  jq -e '[.items[]|select(.scope? != null and .scope != "project")]|length==0' "$PACK" >/dev/null 2>&1 \
+    || fail_msg "pack.json contains non-project scope (S1 stays in the service repo)"
 fi
 
 # 2b. cognition adoption consistency
@@ -58,6 +61,9 @@ REPORTS="$(find execution -path '*/reports/*.json' -type f 2>/dev/null || true)"
 for f in $REPORTS; do
   jq -e '.apiVersion == "sdlc/v1" and .kind == "ExecutionReport" and (.metadata.service|length>0) and (.spec.stage|length>0)' "$f" >/dev/null \
     || fail_msg "report invalid: $f"
+  # Local cognition is reported as evidence/context only; a statement here is a leak.
+  jq -e '[.spec.localCognition[]? | select(has("statement"))] | length == 0' "$f" >/dev/null 2>&1 \
+    || fail_msg "report leaks a local cognition statement: $f"
 done
 
 # 4. wiki generated (the wiki is derived from reports; with none, there is nothing to derive)

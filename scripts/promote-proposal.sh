@@ -16,6 +16,11 @@ if [ "$STATUS" = "rejected" ]; then
   echo "ERROR: proposal $ID was rejected; reopen it before promoting" >&2
   exit 1
 fi
+SCOPE="$(jq -r '.scope // "project"' "$PROP")"
+if [ "$SCOPE" != "project" ]; then
+  echo "ERROR: proposal $ID has scope '$SCOPE'; service-local rules use scripts/local-cognition.sh" >&2
+  exit 1
+fi
 [ -f knowledge/pack.json ] || { echo "ERROR: missing knowledge/pack.json" >&2; exit 1; }
 
 TYPE="$(jq -r .type "$PROP")"

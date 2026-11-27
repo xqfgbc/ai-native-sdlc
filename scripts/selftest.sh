@@ -333,6 +333,64 @@ printf '%s' "$rp_out" | grep -q 'uploaded=1' && ok "replay uploads the backlog r
 rp2_out="$( cd "$WORK/offline-svc" && bash scripts/replay-reports.sh "$WORK/demo-control-plane" 2>&1 )"
 printf '%s' "$rp2_out" | grep -q 'uploaded=0' && ok "replay is idempotent" || bad "replay idempotent"
 
+# 5e. service-local cognition (S1): statement stays local, evidence goes up.
+SVC="$WORK/demo-order-service-management"
+if ( cd "$SVC" && bash scripts/local-cognition.sh add --statement "local probe" --problem "why" \
+      --enforcement deterministic ) >/dev/null 2>&1; then
+  bad "local-cognition rejects deterministic without a gate"
+else
+  ok "local-cognition rejects deterministic without a gate"
+fi
+( cd "$SVC" && bash scripts/local-cognition.sh add \
+    --statement "本地探针规则：order 名称必须非空" --problem "空名称导致下游失败" \
+    --origin-type incident --origin-ref INC-1 --enforcement deterministic \
+    --gate-type archunit --gate-name noEmptyOrderName --gate-path src/test/java/ArchitectureTest.java \
+    --owner tester >/dev/null )
+local_id="$( cd "$SVC" && bash scripts/local-cognition.sh list --json | jq -r '.[0].id' )"
+case "$local_id" in L-*) ok "local-cognition adds an S1 item" ;; *) bad "local-cognition add" ;; esac
+grep -q "$local_id" "$SVC/CLAUDE.md" && ok "local-cognition renders into CLAUDE.md" || bad "local-cognition render"
+hook_local="$( cd "$SVC" && bash hooks/cognition-context.sh 2>&1 )"
+printf '%s' "$hook_local" | grep -q "$local_id" && ok "session hook surfaces local cognition" || bad "local hook"
+( cd "$SVC" && printf '\nlocal probe\n' >> README.md && git add -A \
+  && git commit -q -m "[AI-Agent] #N/A chore: add a local cognition probe" && bash .sdlc/collect.sh >/dev/null )
+local_sha="$(git -C "$SVC" rev-parse HEAD)"
+local_report="$(find "$WORK/demo-control-plane/execution" -name "$local_sha.json" | head -1)"
+[ -n "$local_report" ] && [ "$(jq '.spec.localCognition|length' "$local_report")" = "1" ] \
+  && ok "collect reports local cognition evidence" || bad "local cognition report"
+if grep -q "本地探针规则" "$local_report" 2>/dev/null; then
+  bad "local statement is not uploaded"
+else
+  ok "local statement is not uploaded"
+fi
+# A service-scoped proposal can never be promoted into the project pack.
+jq -n --arg id "P-order-service-scope-guard" \
+  '{apiVersion:"sdlc/v1",kind:"KnowledgeProposal",id:$id,type:"constraint",scope:"service",
+    title:"service scope probe",statement:"service scope probe",status:"proposed",provenance:[]}' \
+  > "$WORK/demo-control-plane/knowledge/proposals/P-order-service-scope-guard.json"
+if ( cd "$WORK/demo-control-plane" && bash scripts/promote-proposal.sh . P-order-service-scope-guard tester deterministic ) >/dev/null 2>&1; then
+  bad "promote refuses a service-scoped proposal"
+else
+  ok "promote refuses a service-scoped proposal"
+fi
+rm -f "$WORK/demo-control-plane/knowledge/proposals/P-order-service-scope-guard.json"
+# The validator rejects S1 scope leaking into the pack.
+PACK_JSON="$WORK/demo-control-plane/knowledge/pack.json"; cp "$PACK_JSON" "$WORK/pack.bak"
+jq '(.items[0].scope)="service"' "$PACK_JSON" > "$WORK/pack.tmp" && mv "$WORK/pack.tmp" "$PACK_JSON"
+if ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . ) >/dev/null 2>&1; then
+  bad "validate rejects S1 scope in the pack"
+else
+  ok "validate rejects S1 scope in the pack"
+fi
+cp "$WORK/pack.bak" "$PACK_JSON"
+# The analyzer marks new proposals as project scope.
+( cd "$SVC" && echo learn >> README.md && git add -A \
+  && git commit -q -m "[AI-Agent] #N/A feat: scope probe [learn] prefer scope probe" \
+  && bash .sdlc/collect.sh >/dev/null )
+( cd "$WORK/demo-control-plane" && bash scripts/analyze-reports.sh . >/dev/null )
+scope_prop="$WORK/demo-control-plane/knowledge/proposals/P-order-service-prefer-scope-probe.json"
+[ "$(jq -r '.scope // ""' "$scope_prop" 2>/dev/null)" = "project" ] \
+  && ok "analyzer marks proposals as project scope" || bad "proposal scope"
+
 # 6. deterministic guard hooks (agent mode works; stdin can never hang them)
 printf 'clean\n' > "$WORK/clean.txt"
 if ns_out="$(printf '{"tool_input":{"file_path":"%s"}}' "$WORK/clean.txt" | "$ROOT/hooks/no-secrets.sh" 2>&1)"; then

@@ -18,13 +18,13 @@
 | git commit | `pre-commit` | `.githooks/pre-commit` → `hooks/` 三个脚本 | staged 文件里的 secret / 生成物 / Boot4 违规 | `--no-verify`（需人类明确批准） |
 | git commit | `commit-msg` | `.githooks/commit-msg` | 不符合 `AGENTS.md §6` 的提交信息 | 同上 |
 | git push | `pre-push` | `.githooks/pre-push` | `release*` 直推需走 PR；其余分支（含 main/master）可直推，但必须先通过本仓验证 | `SDL_SKIP_VERIFY=1`（需在 PR 说明理由；分支规则不可跳过） |
-| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（99 项）、技能/agent 配置评测 | 无（远端权威） |
+| CI | `framework-selftest.yml` / `agent-evals.yml` | GitHub Actions | 框架自测（108 项）、技能/agent 配置评测 | 无（远端权威） |
 
 `pre-push` 的"本仓验证"按仓类型分派：
 
 - 服务仓：`scripts/app-verify.sh build` + `test` + `lint`（不含需要 Docker 的 itest）
 - 控制平面仓：`scripts/validate-project.sh .`
-- 框架仓：`scripts/selftest.sh`（99 项）
+- 框架仓：`scripts/selftest.sh`（108 项）
 
 安装方式：`core.hooksPath` 是**本地配置**；生成器会写入并在 bootstrap 后启用，新 clone 靠 SessionStart 或 `AGENTS.md` 第 0 步恢复。
 
@@ -149,7 +149,7 @@
 **全局前置条件**（每条都适用）：
 
 1. 按 §4 要求先走 `loop/01-intent → 02-spec → 03-plan`，plan 写明改动文件与验证命令；
-2. 新增门禁必须带 selftest 用例（当前基线 99 项，改完同步 §1 计数）；
+2. 新增门禁必须带 selftest 用例（当前基线 108 项，改完同步 §1 计数）；
 3. 完成后按文件头的归档规则移入 `todo-archive.md`。
 
 **建议顺序**：01 → 03 → 02 → 06 → 05 → 04；13 现在可实施；08/09 等条件满足再启动。
@@ -285,3 +285,5 @@ git checkout main && git push gate-test main                 # 应被拦
   TODO-11（采集/上传分离 + replay-reports）、TODO-12（upload-report 基线分支）；selftest 95 项。
 - 2026-11-27：新增驳回流程——`review-proposals.sh reject` 与 signoff 页“驳回”按钮；`status=rejected`
   墓碑不再被 analyzer 重建、promote 会拒绝；selftest 99 项。
+- 2026-11-27：知识分层 Phase 1——服务本地认知（S1）`local-cognition.sh`，正文只留服务仓；
+  collect 只上报 origin/problem/summary/gate 证据；proposal/pack 增加 scope 校验；selftest 108 项。

@@ -50,6 +50,10 @@ bash scripts/cognition.sh context
 
 deterministic 条目由 hook/ArchUnit/lint/CI 强制，advisory 条目靠注入与评审执行。
 
+服务本地规则（S1）不进入 `knowledge/pack.json`：它们在服务仓用 `scripts/local-cognition.sh` 维护，
+执行报告只上报 `origin/problem/summary/gate` 证据，不上报规则正文。只有需要多服务统一时才由人写成
+`scope=project` 的 proposal 并签核。
+
 `loop/04-build/services.json` 的 `cognitionPack.version` 记录服务**实际采用**的版本（`0.0.0` = 尚未下发）；
 `sync-cognition.sh` 下发时同步更新，远端 PR 流程先记为 `pendingVersion`/`pendingPr`；
 `validate-project.sh` 在本地能定位到服务仓时校验注册表与 pin 版本是否漂移。

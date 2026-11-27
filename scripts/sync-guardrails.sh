@@ -44,6 +44,7 @@ FILES=(
   "scripts/collect.sh|.sdlc/collect.sh"
   "scripts/debt.sh|scripts/debt.sh"
   "scripts/install-hooks.sh|scripts/install-hooks.sh"
+  "scripts/local-cognition.sh|scripts/local-cognition.sh"
   "scripts/replay-reports.sh|scripts/replay-reports.sh"
   "scripts/scan-findings.sh|scripts/scan-findings.sh"
   "scripts/upload-report.sh|scripts/upload-report.sh"

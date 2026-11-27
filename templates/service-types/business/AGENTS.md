@@ -20,6 +20,21 @@
 > 采集器会读取 session-log，生成 `candidateKnowledge`（带 evidenceRef）。没有 session-log 的非平凡改动会被判 `needs_review`。
 > Stop hook `session-log-guard.sh` 会在有实质提交却没写日志时阻止会话结束。
 
+## 2b. 服务本地认知（S1）
+
+只对本服务成立的规则不要走项目签核，放本地：
+
+```bash
+bash scripts/local-cognition.sh add --statement "…" --problem "它解决什么" \
+  --origin-type incident --origin-ref INC-42 \
+  --enforcement deterministic --gate-type archunit --gate-name noFoo --gate-path src/test/...
+```
+
+- 规则正文（statement）只在本仓；`collect` 只上报 `origin/problem/summary/gate` 证据，不上报正文。
+- `deterministic` 必须给出真实门禁（`--gate-type` + `--gate-name`/`--gate-path`），否则会被拒绝。
+- 渲染进 `CLAUDE.md`/`AGENTS.md` 的本地块，并由 SessionStart hook 注入。
+- 只有需要多服务统一时才提升为项目级（S2）：人工写 proposal 并签核。
+
 ## 3. 采集与上传
 - commit 触发 `.sdlc/collect.sh`：增量采集（上次 sha → HEAD）→ `sync/reports/<toSha>.json` → 上传管理仓。
 - **facts 确定性提取**，AI 只产出候选认知；`review.status` 由确定性规则判定。
