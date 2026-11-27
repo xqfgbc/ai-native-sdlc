@@ -83,7 +83,7 @@
 > - `pre-commit` 不允许依赖网络/Docker，单次耗时 < 2s；重检查放 `pre-push`。
 > - 新增门禁必须有 selftest 用例（生成仓库 → 触发 → 断言拦截/放行），并同步 README/CLAUDE/DELIVERY/DESIGN/HANDOVER 的自检计数。
 > - 无法确定性判断的规则不要写成门禁，写成 skill/AGENTS 指引。
-> - 生成器改动必须同时更新 `templates/` 与存量仓同步方式（见 TODO-07）。
+> - 生成器改动必须同时更新 `templates/` 与存量仓同步方式（见 `scripts/sync-guardrails.sh`，已归档的 TODO-07）。
 
 ### 4.0 背景：只 clone 服务仓（无 control-plane）的降级行为
 
@@ -230,7 +230,7 @@
 ### [ ] TODO-13（P3）服务仓 README 的“独立开发（无 control-plane）”小节
 
 - 现状：模板 README 只描述完整闭环路径，未说明单仓降级行为（见 4.0）。
-- 依赖：TODO-10、TODO-11（`SDL_MGMT_REPO` 与 `replay-reports.sh` 落地后写真实命令）。
+- 依赖：已满足（TODO-10/11 已归档；`SDL_MGMT_REPO`、`--resolve-mgmt`、`replay-reports.sh` 可直接写进文档）。
 - 内容：4.0 的降级表 + 单仓可用的验证命令 + 补传步骤 + 何时必须要有 control-plane。
 - 验收：模板 README 与已生成服务仓 README 同步；命令可复制执行；不承诺尚未实现的能力。
 
