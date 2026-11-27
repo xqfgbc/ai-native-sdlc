@@ -31,4 +31,14 @@ if [ -f "$LOCAL" ]; then
     echo "（本地规则正文不上报；查询：bash scripts/local-cognition.sh list --json）"
   fi
 fi
+# Control-plane only: a one-line background queue, never a blocking instruction.
+GQ="$ROOT/loop/04-build/gates/queue.json"
+if [ -f "$GQ" ]; then
+  OPEN="$(jq '[.items[]|select(.status=="open" or .status=="in-progress")]|length' "$GQ" 2>/dev/null || echo 0)"
+  if [ "$OPEN" -gt 0 ] 2>/dev/null; then
+    IDS="$(jq -r '[.items[]|select(.status=="open" or .status=="in-progress")|.id][0:3]|join(", ")' "$GQ" 2>/dev/null || true)"
+    echo "门禁待办（后台，不要打断当前任务）：${OPEN} 条 — ${IDS}"
+    echo "需要时：bash scripts/gate-queue.sh list --status open --json"
+  fi
+fi
 exit 0

@@ -37,6 +37,36 @@ AI 预判为 `reject-duplicate` 时，推荐的动作就是驳回；也可以直
 bash scripts/review-proposals.sh reject <proposal-id> --owner <你> --reason "duplicate of <active-id>"
 ```
 
+### 门禁任务与下发（S2）
+
+签核为 deterministic 会自动写入 `loop/04-build/gates/queue.json`：一条规则一条任务（含 `authoringRepo`、
+`appliesTo`），不会给每个服务各生成一份。AI 的工作流：
+
+```bash
+bash scripts/gate-queue.sh list --status open --json
+bash scripts/gate-queue.sh claim G-<proposal-id> --owner <agent>
+# 在 control-plane/guardrails/<gate-id>/ 写唯一实现 + manifest.json
+bash scripts/gate-queue.sh done G-<proposal-id> --evidence "ArchUnit ... + app-verify test"
+bash scripts/sync-project-gates.sh . --check     # 或 --write 下发到 appliesTo 服务
+bash scripts/validate-project.sh . --strict      # deterministic 必须有门禁证据
+```
+
+`guardrails/<gate-id>/manifest.json`：
+
+```json
+{"id":"gate-<proposal-id>","proposalId":"<proposal-id>","appliesTo":["speaker"],
+ "files":[{"src":"files/ProjectGateTest.java","dest":"src/test/java/.../ProjectGateTest.java"}],
+ "evidence":"bash scripts/app-verify.sh test"}
+```
+
+`sync-project-gates.sh` 把 `files[].src` 复制到服务仓的 `dest`；服务只执行，不各自实现。
+
+S1 证据汇总：
+
+```bash
+bash scripts/local-cognition-report.sh . --json   # 覆盖率/stale/提升候选，同时刷新 wiki/local-cognition.md
+```
+
 ### 认知如何到达 AI
 
 签核后的 active 条目会在 `sync-cognition.sh` 时渲染进服务仓的 `CLAUDE.md` / `AGENTS.md`

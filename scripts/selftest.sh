@@ -221,6 +221,19 @@ if [ -n "$prop" ]; then
   [ "$ver" != "0.1.0" ] && ok "promote-proposal bumps pack version ($ver)" || bad "pack version bump"
   [ -f "$WORK/demo-control-plane/knowledge/guardrails/$prop.md" ] && ok "deterministic guardrail stub" || bad "guardrail stub"
   [ -f "$WORK/demo-control-plane/knowledge/constraints/$prop.json" ] && ok "promoted item lands in knowledge/constraints" || bad "constraint directory"
+  GQ="$WORK/demo-control-plane/loop/04-build/gates/queue.json"
+  jq -e --arg id "$prop" '.items[]|select(.proposalId==$id and .status=="open")' "$GQ" >/dev/null 2>&1 \
+    && ok "deterministic sign-off enqueues a gate task" || bad "gate queue enqueue"
+  gate_hook="$( cd "$WORK/demo-control-plane" && bash hooks/cognition-context.sh 2>&1 )"
+  printf '%s' "$gate_hook" | grep -q "门禁待办" && ok "session hook surfaces pending gates" || bad "gate queue hook"
+  if ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . --strict ) >/dev/null 2>&1; then
+    bad "strict validate fails without gate evidence"
+  else
+    ok "strict validate fails without gate evidence"
+  fi
+  ( cd "$WORK/demo-control-plane" && bash scripts/gate-queue.sh done "G-$prop" --evidence "selftest gate" >/dev/null )
+  ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . --strict ) >/dev/null 2>&1 \
+    && ok "strict validate passes with gate evidence" || bad "strict validate evidence"
   ( cd "$WORK/demo-control-plane" && bash scripts/sync-cognition.sh . "$WORK/demo-order-service-management" >/dev/null )
   [ -f "$WORK/demo-order-service-management/.sdlc/cognition-pack.json" ] && ok "sync-cognition distributes pack" || bad "sync-cognition"
   grep -q "$prop" "$WORK/demo-order-service-management/CLAUDE.md" && ok "sync renders active cognition into CLAUDE.md" || bad "cognition block"
@@ -362,6 +375,30 @@ if grep -q "本地探针规则" "$local_report" 2>/dev/null; then
 else
   ok "local statement is not uploaded"
 fi
+# S1 rollup + cross-service promotion signal + stale gate detection.
+lcr="$( cd "$WORK/demo-control-plane" && bash scripts/local-cognition-report.sh . --json 2>/dev/null )"
+[ "$(printf '%s' "$lcr" | jq -r '[.services[]|select(.service=="order-service")]|length')" = "1" ] \
+  && ok "local cognition report includes the service" || bad "local cognition report service"
+[ "$(printf '%s' "$lcr" | jq '.stale|length')" -ge 1 ] \
+  && ok "stale local gate detected" || bad "stale local gate"
+mkdir -p "$WORK/demo-control-plane/execution/build/web-portal/reports"
+jq '.metadata.service="web-portal" | .metadata.toSha="web-portal-local" | .metadata.createdAt="2099-01-01T00:00:00Z"' \
+  "$local_report" > "$WORK/demo-control-plane/execution/build/web-portal/reports/web-portal-local.json"
+lcr2="$( cd "$WORK/demo-control-plane" && bash scripts/local-cognition-report.sh . --json 2>/dev/null )"
+[ "$(printf '%s' "$lcr2" | jq '.promotionCandidates|length')" -ge 1 ] \
+  && ok "cross-service gate produces a promotion candidate" || bad "promotion candidate"
+# S2 gate distribution: control-plane guardrails -> appliesTo services.
+mkdir -p "$WORK/demo-control-plane/guardrails/gate-demo/files"
+printf 'gate demo\n' > "$WORK/demo-control-plane/guardrails/gate-demo/files/DemoGate.txt"
+jq -n '{id:"gate-demo",proposalId:"P-demo",appliesTo:["order-service"],
+  files:[{src:"files/DemoGate.txt",dest:"sdlc/DemoGate.txt"}],evidence:"selftest"}' \
+  > "$WORK/demo-control-plane/guardrails/gate-demo/manifest.json"
+pg_out="$(bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service 2>&1)"
+printf '%s' "$pg_out" | grep -q 'DemoGate.txt' && ok "sync-project-gates detects drift" || bad "project gate dry-run"
+bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service --write >/dev/null 2>&1
+[ -f "$SVC/sdlc/DemoGate.txt" ] && ok "sync-project-gates writes the gate" || bad "project gate write"
+bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service --check >/dev/null 2>&1 \
+  && ok "sync-project-gates --check passes after write" || bad "project gate check"
 # A service-scoped proposal can never be promoted into the project pack.
 jq -n --arg id "P-order-service-scope-guard" \
   '{apiVersion:"sdlc/v1",kind:"KnowledgeProposal",id:$id,type:"constraint",scope:"service",

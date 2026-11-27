@@ -56,6 +56,11 @@ rm -f "$PROP"
 
 # Environment-over-instructions (poteto): deterministic constraints need a guardrail, not prose.
 if [ "$ENFORCEMENT" = "deterministic" ]; then
+  if [ -f scripts/gate-queue.sh ]; then
+    APPLIES="$(jq -r '[.services[].name]|join(",")' loop/04-build/services.json 2>/dev/null || true)"
+    bash scripts/gate-queue.sh add --proposal "$ID" --title "$TITLE" --repo control-plane \
+      --applies-to "$APPLIES" >/dev/null 2>&1 || true
+  fi
   mkdir -p knowledge/guardrails
   cat > "knowledge/guardrails/$ID.md" <<EOF
 # Guardrail $ID

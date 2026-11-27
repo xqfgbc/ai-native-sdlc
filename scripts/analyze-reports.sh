@@ -232,4 +232,9 @@ if [ -f "$REG" ]; then
   done
 fi
 
+# S1 evidence rollup (no rule statements).
+if [ -f scripts/local-cognition-report.sh ]; then
+  bash scripts/local-cognition-report.sh . >/dev/null 2>&1 || true
+fi
+
 echo "analyze: wiki updated ($(find wiki/services -name '*.md' 2>/dev/null | wc -l | tr -d ' ') service pages, $(find knowledge/proposals -name '*.json' 2>/dev/null | wc -l | tr -d ' ') proposals)"

@@ -2,7 +2,13 @@
 # scripts/validate-project.sh — validate a management repo's registry, reports, and pack.
 # Usage: scripts/validate-project.sh [management-repo-dir]
 set -euo pipefail
-MGMT="${1:-.}"
+MGMT="."; STRICT=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --strict) STRICT=1; shift ;;
+    *) MGMT="$1"; shift ;;
+  esac
+done
 cd "$MGMT"
 fail=0
 fail_msg() { echo "VALIDATE: $1" >&2; fail=1; }
@@ -53,6 +59,32 @@ if [ -f "$REG" ] && [ -f "$PACK" ]; then
         fail_msg "services.json: $svc records pack v$ver but $local_dir pins v$pinned (re-run sync-cognition.sh)"
       fi
     done <<< "$(jq -r '.services[]? | select(.cognitionPack.version? != null) | "\(.name)\t\(.cognitionPack.version)"' "$REG" 2>/dev/null || true)"
+  fi
+fi
+
+# 2c. deterministic gates: a signed rule without evidence is a claim, not a gate.
+#     Default = warning (legacy packs would otherwise block every push); --strict fails.
+have_gate() { # <item-id>
+  local id="$1" m
+  if [ -f loop/04-build/gates/queue.json ] && \
+     jq -e --arg id "$id" '[.items[]|select(.proposalId==$id and .status=="done")]|length>0' \
+       loop/04-build/gates/queue.json >/dev/null 2>&1; then return 0; fi
+  for m in $(ls guardrails/*/manifest.json 2>/dev/null || true); do
+    jq -e --arg id "$id" '(.proposalId==$id or .id==$id)' "$m" >/dev/null 2>&1 && return 0
+  done
+  jq -e --arg id "$id" '.items[]|select(.id==$id and (.implementation.status // "") == "synced")' \
+    knowledge/pack.json >/dev/null 2>&1 && return 0
+  return 1
+}
+if [ -f "$PACK" ]; then
+  gate_missing=0
+  while IFS= read -r gid; do
+    [ -n "$gid" ] || continue
+    have_gate "$gid" || gate_missing=$((gate_missing+1))
+  done <<< "$(jq -r '.items[]|select(.status=="active" and .enforcement=="deterministic")|.id' "$PACK")"
+  if [ "$gate_missing" -gt 0 ]; then
+    echo "VALIDATE: WARN: $gate_missing deterministic item(s) have no gate evidence (bash scripts/gate-queue.sh list)" >&2
+    if [ "$STRICT" = 1 ]; then fail_msg "strict: deterministic items without gate evidence"; fi
   fi
 fi
 

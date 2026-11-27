@@ -54,3 +54,6 @@
 - 复盘按 `loop/07-maintain/retro-template.md`：每个 finding 必须落成 rule/check/test 或债务。
 - 签核前先跑 `bash scripts/review-proposals.sh .`，AI 建议仅供参考，人工用 `signoff.py` 签核或驳回；
   驳回后 proposal 是 `status=rejected` 墓碑，不会被 analyzer 重建，也不能再 promote。
+- deterministic 签核会进 `loop/04-build/gates/queue.json`：AI 用 `gate-queue.sh list/claim/done` 领取并关闭，
+  `done` 必须带门禁证据；实现只写一份（control-plane/guardrails），用 `sync-project-gates.sh` 下发。
+- `validate-project.sh` 默认对"deterministic 无门禁证据"告警；`--strict` 时失败（用于发布/CI）。

@@ -64,7 +64,9 @@ cp "$ROOT/scripts/analyze-reports.sh" "$ROOT/scripts/validate-project.sh" \
    "$ROOT/scripts/intake.sh" "$ROOT/scripts/intake-signal.sh" \
    "$ROOT/scripts/install-hooks.sh" "$ROOT/scripts/signoff.py" \
    "$ROOT/scripts/debt.sh" "$ROOT/scripts/review-proposals.sh" "$ROOT/scripts/sync-cognition-remote.sh" \
-   "$ROOT/scripts/cognition.sh" "$ROOT/scripts/sync-guardrails.sh" "$TARGET/scripts/"
+   "$ROOT/scripts/cognition.sh" "$ROOT/scripts/sync-guardrails.sh" \
+   "$ROOT/scripts/gate-queue.sh" "$ROOT/scripts/sync-project-gates.sh" \
+   "$ROOT/scripts/local-cognition-report.sh" "$TARGET/scripts/"
 chmod +x "$TARGET"/scripts/*.sh
 
 # Agent wiring so a fresh clone installs the hooks on the first session.
