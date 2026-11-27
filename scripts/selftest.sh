@@ -132,6 +132,22 @@ if ( cd "$WORK/gate-repo" && printf 'refs/heads/release/9.9 %s refs/heads/releas
 else
   ok "pre-push blocks a release ref pushed from another branch"
 fi
+# Strict gate evidence is opt-in via loop/04-build/gates/strict.
+DPACK="$WORK/demo-control-plane/knowledge/pack.json"
+jq '.items += [{id:"P-demo-nogate",type:"constraint",scope:"project",title:"no gate probe",
+  statement:"no gate probe",owner:"tester",status:"active",enforcement:"deterministic",
+  provenance:[],path:"knowledge/constraints/P-demo-nogate.md"}]' "$DPACK" > "$WORK/dpack.tmp" && mv "$WORK/dpack.tmp" "$DPACK"
+( cd "$WORK/demo-control-plane" && bash .githooks/pre-push </dev/null ) >/dev/null 2>&1 \
+  && ok "pre-push warns without the strict marker" || bad "pre-push default gate evidence"
+mkdir -p "$WORK/demo-control-plane/loop/04-build/gates"
+printf 'strict\n' > "$WORK/demo-control-plane/loop/04-build/gates/strict"
+if ( cd "$WORK/demo-control-plane" && bash .githooks/pre-push </dev/null ) >/dev/null 2>&1; then
+  bad "pre-push strict fails on missing gate evidence"
+else
+  ok "pre-push strict fails on missing gate evidence"
+fi
+rm -f "$WORK/demo-control-plane/loop/04-build/gates/strict"
+jq 'del(.items[]|select(.id=="P-demo-nogate"))' "$DPACK" > "$WORK/dpack.tmp" && mv "$WORK/dpack.tmp" "$DPACK"
 [ -f "$WORK/demo-control-plane/scripts/intake.sh" ] && ok "management intake script" || bad "intake script"
 ( cd "$WORK/demo-control-plane" && bash scripts/intake.sh >/dev/null ) && \
   [ -n "$(ls "$WORK/demo-control-plane/intake/candidates/"*.md 2>/dev/null || true)" ] && \

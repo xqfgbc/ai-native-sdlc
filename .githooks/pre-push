@@ -41,8 +41,11 @@ if [ -f "$root/scripts/app-verify.sh" ] && { [ -f "$root/build.gradle.kts" ] || 
     exit 1
   }
 elif [ -f "$root/scripts/validate-project.sh" ] && [ -f "$root/loop/04-build/services.json" ]; then
-  echo "pre-push: validate-project ..." >&2
-  ( cd "$root" && bash scripts/validate-project.sh . ) || {
+  strict=""
+  # Opt in after backfilling gate evidence: loop/04-build/gates/strict
+  if [ -f "$root/loop/04-build/gates/strict" ]; then strict="--strict"; fi
+  echo "pre-push: validate-project ${strict} ..." >&2
+  ( cd "$root" && bash scripts/validate-project.sh . $strict ) || {
     echo "pre-push: project validation failed." >&2
     exit 1
   }

@@ -61,6 +61,9 @@ bash scripts/validate-project.sh . --strict      # deterministic 必须有门禁
 
 `sync-project-gates.sh` 把 `files[].src` 复制到服务仓的 `dest`；服务只执行，不各自实现。
 
+回填完 deterministic 的门禁证据后，创建 `loop/04-build/gates/strict`（内容随意），本仓 `pre-push`
+会自动改用 `validate-project.sh --strict`；没有这个 marker 时仍只告警，避免历史条目阻塞推送。
+
 S1 证据汇总：
 
 ```bash
