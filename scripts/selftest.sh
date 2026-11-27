@@ -399,6 +399,15 @@ bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service 
 [ -f "$SVC/sdlc/DemoGate.txt" ] && ok "sync-project-gates writes the gate" || bad "project gate write"
 bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service --check >/dev/null 2>&1 \
   && ok "sync-project-gates --check passes after write" || bad "project gate check"
+printf 'drift\n' >> "$SVC/sdlc/DemoGate.txt"
+if ( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . --strict ) >/dev/null 2>&1; then
+  bad "strict validate fails on an unsynced project gate"
+else
+  ok "strict validate fails on an unsynced project gate"
+fi
+bash "$ROOT/scripts/sync-project-gates.sh" "$WORK/demo-control-plane" --service order-service --write >/dev/null 2>&1
+( cd "$WORK/demo-control-plane" && bash scripts/validate-project.sh . --strict ) >/dev/null 2>&1 \
+  && ok "strict validate passes after gate sync" || bad "strict validate after sync"
 # A service-scoped proposal can never be promoted into the project pack.
 jq -n --arg id "P-order-service-scope-guard" \
   '{apiVersion:"sdlc/v1",kind:"KnowledgeProposal",id:$id,type:"constraint",scope:"service",

@@ -88,6 +88,39 @@ if [ -f "$PACK" ]; then
   fi
 fi
 
+# 2d. project gate manifests must be applied to every appliesTo service.
+if [ -d guardrails ]; then
+  sync_missing=0
+  for m in $(ls guardrails/*/manifest.json 2>/dev/null || true); do
+    gid="$(jq -r '.id // ""' "$m" 2>/dev/null || true)"
+    [ -n "$gid" ] || gid="$(basename "$(dirname "$m")")"
+    while IFS= read -r svc; do
+      [ -n "$svc" ] || continue
+      repo="$(jq -r --arg n "$svc" '.services[]|select(.name==$n)|.repo // empty' "$REG" 2>/dev/null || true)"
+      path=""
+      if [ -n "$repo" ] && [ -d "$repo" ] && [ -f "$repo/service.json" ]; then path="$repo"
+      elif [ -n "$repo" ]; then
+        cand="$(dirname "$(pwd)")/${repo##*/}"
+        [ -d "$cand" ] && [ -f "$cand/service.json" ] && path="$cand"
+      fi
+      if [ -z "$path" ]; then
+        echo "VALIDATE: WARN: gate $gid cannot verify $svc (no local clone)" >&2
+        sync_missing=$((sync_missing+1)); continue
+      fi
+      while IFS=$'\t' read -r src dest; do
+        [ -n "$src" ] || continue
+        if ! cmp -s "$(dirname "$m")/$src" "$path/$dest"; then
+          echo "VALIDATE: WARN: gate $gid not synced to $svc: $dest" >&2
+          sync_missing=$((sync_missing+1))
+        fi
+      done <<< "$(jq -r '.files[]? | [.src,.dest]|@tsv' "$m")"
+    done <<< "$(jq -r '.appliesTo[]?' "$m")"
+  done
+  if [ "$sync_missing" -gt 0 ] && [ "$STRICT" = 1 ]; then
+    fail_msg "strict: project gates are not synced to every appliesTo service"
+  fi
+fi
+
 # 3. execution reports
 REPORTS="$(find execution -path '*/reports/*.json' -type f 2>/dev/null || true)"
 for f in $REPORTS; do

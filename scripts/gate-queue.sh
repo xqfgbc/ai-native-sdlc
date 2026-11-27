@@ -116,6 +116,13 @@ case "$cmd" in
       esac
     done
     [ -n "$ID" ] && [ -n "$EVIDENCE" ] || { echo "gate-queue: done needs <id> --evidence" >&2; exit 1; }
+    # A project gate that is not applied to its services is not done.
+    if [ -f scripts/sync-project-gates.sh ] && ls guardrails/*/manifest.json >/dev/null 2>&1; then
+      if ! bash scripts/sync-project-gates.sh "$MGMT" --check >/dev/null 2>&1; then
+        echo "gate-queue: project gates are out of sync; run scripts/sync-project-gates.sh $MGMT --write first" >&2
+        exit 1
+      fi
+    fi
     write_registry '(.items[]|select(.id==$id)) |= (.status="done" | .evidence=$ev | .closedAt=$now)' --arg id "$ID" --arg ev "$EVIDENCE"
     if [ "$JSON" = 1 ]; then jq --arg id "$ID" '.items[]|select(.id==$id)' "$FILE"; else echo "gate-queue: closed $ID"; fi
     ;;

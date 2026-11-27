@@ -26,7 +26,7 @@
 ```bash
 # 0) clone 后先启用确定性护栏（幂等）；Claude Code 会在会话开始时自动执行
 bash scripts/install-hooks.sh
-#    框架自检：应 118 项全绿
+#    框架自检：应 120 项全绿
 bash scripts/selftest.sh
 
 # 1) 生成控制平面仓（项目管理仓：控制平面 + 实时 wiki）
@@ -147,7 +147,7 @@ templates/project-management/    管理仓模板（loop/execution/knowledge/wiki
 templates/service-types/         6 类服务模板 + _shared（Gradle 脚手架）
 schemas/                         execution-report / service-registry / cognition-pack
 scripts/                         生成器 + 闭环 + 验证（见 scripts/README.md）
-.agents/skills/                   23 个技能（Agent Skills 标准，规范源）
+.agents/skills/                   25 个技能（Agent Skills 标准，规范源）
 .claude/ .codex/ .opencode/       per-agent 适配（skills/agents/settings/hooks）
 hooks/ + .githooks/               确定性护栏（secret/path/spring/生产门禁/测试冻结）
 evals/                            agent 评测套件
@@ -171,8 +171,8 @@ jq .trustLevel service.json
 bash scripts/autopilot-gate.sh
 ```
 
-- 框架自检：`bash scripts/selftest.sh`（118 项）。
-- 技能/子代理配置：`./scripts/validate-skills.sh`（23 skills / 8 agents）。
+- 框架自检：`bash scripts/selftest.sh`（120 项）。
+- 技能/子代理配置：`./scripts/validate-skills.sh`（25 skills / 8 agents）。
 - 设计说明：`docs/trust-ladder.md`、`docs/agent-splitting.md`。
 
 ---
@@ -230,4 +230,4 @@ bash scripts/sync-cognition.sh . ../myproj-speaker-management
 
 ---
 
-> 一行证明：`bash scripts/selftest.sh` → `selftest: 118 passed, 0 failed`。
+> 一行证明：`bash scripts/selftest.sh` → `selftest: 120 passed, 0 failed`。

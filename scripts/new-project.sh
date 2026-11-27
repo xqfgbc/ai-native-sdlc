@@ -69,6 +69,13 @@ cp "$ROOT/scripts/analyze-reports.sh" "$ROOT/scripts/validate-project.sh" \
    "$ROOT/scripts/local-cognition-report.sh" "$TARGET/scripts/"
 chmod +x "$TARGET"/scripts/*.sh
 
+# Control-plane AI skills (canonical source: framework .agents/skills).
+mkdir -p "$TARGET/.agents/skills" "$TARGET/.claude/skills"
+for sk in commit-conventions debt-registry retro-to-rule review-proposals implement-gate; do
+  [ -d "$ROOT/.agents/skills/$sk" ] && cp -R "$ROOT/.agents/skills/$sk" "$TARGET/.agents/skills/" 2>/dev/null || true
+  [ -d "$ROOT/.claude/skills/$sk" ] && cp -R "$ROOT/.claude/skills/$sk" "$TARGET/.claude/skills/" 2>/dev/null || true
+done
+
 # Agent wiring so a fresh clone installs the hooks on the first session.
 mkdir -p "$TARGET/.claude" "$TARGET/.codex"
 cp "$ROOT/.claude/settings.json" "$TARGET/.claude/" 2>/dev/null || true
